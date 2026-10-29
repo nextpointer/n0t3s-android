@@ -2,7 +2,9 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { markdownActions } from "overtype";
+import { useAtomValue, useSetAtom } from "jotai";
 import { Button } from "@/components/ui/button";
+import { Loader } from "@/components/ui/loader";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,7 +25,15 @@ import {
   QuoteIcon,
   TaskListIcon,
 } from "@/components/icons/EditorIcons";
-import { cn } from "@/lib/utils";
+import { Cross } from "@/components/icons/Cross";
+import { Zen } from "@/components/icons/Zen";import { cn } from "@/lib/utils";
+import {
+  autoSaveAtom,
+  saveLoadingAtom,
+  unsavedAtom,
+  zenMode,
+  persistZenMode,
+} from "@/store/noteAtom";
 
 /** Minimal shape of the OverType instance this toolbar drives. */
 export interface ToolbarEditor {
@@ -77,9 +87,9 @@ interface EditorToolbarProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   /**
-   * Phones only: the keyboard is covering the screen. The toolbar is pinned
-   * above the keyboard, so it is hidden whenever the keyboard is down rather
-   * than sitting over the note.
+   * Phones only: the keyboard is covering the screen. The bottom action bar
+   * hides behind the keyboard, so its remaining actions (read, zen, save)
+   * are hosted here instead — see NoteActions, which hides on this state.
    */
   mobileVisible?: boolean;
 }
@@ -93,6 +103,12 @@ export const EditorToolbar = memo(function EditorToolbar({
   const [activeFormats, setActiveFormats] = useState<string[]>([]);
   // Cheap guard so we don't setState on every selection tick.
   const activeRef = useRef<string[]>([]);
+
+  const zen = useAtomValue(zenMode);
+  const autoSave = useAtomValue(autoSaveAtom);
+  const unsaved = useAtomValue(unsavedAtom);
+  const loading = useAtomValue(saveLoadingAtom);
+  const setZenMode = useSetAtom(zenMode);
 
   const refreshActiveFormats = useCallback(() => {
     if (!editor?.textarea) return;
@@ -149,50 +165,69 @@ export const EditorToolbar = memo(function EditorToolbar({
     [onViewModeChange],
   );
 
+  const handleToggleZen = useCallback(() => {
+    setZenMode((prev) => {
+      const next = !prev;
+      persistZenMode(next);
+      return next;
+    });
+  }, [setZenMode]);
+
+  const handleSave = useCallback(() => {
+    // The note page owns the actual save routine and mirrors it on this
+    // window event (the command palette uses the same channel).
+    window.dispatchEvent(new CustomEvent("note:save"));
+  }, []);
+
   const CurrentIcon = VIEW_MODES[viewMode].Icon;
+  const previewing = viewMode === "preview";
 
   return (
     <div
       role="toolbar"
       aria-label="Formatting toolbar"
       data-mobile-visible={mobileVisible || undefined}
-      className="note-toolbar flex w-full items-center gap-1 overflow-x-auto px-1.5 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="note-toolbar flex w-full items-center gap-0.5 px-1.5 py-1"
     >
-      {GROUPS.map((group, gi) => (
-        <div key={gi} className="flex shrink-0 items-center gap-1">
-          {gi > 0 && (
-            <span aria-hidden className="mx-0.5 h-4 w-px shrink-0 bg-border" />
-          )}
-          {group.map((spec) => {
-            const isActive = spec.format ? activeFormats.includes(spec.format) : false;
-            return (
-              <Button
-                key={spec.name}
-                type="button"
-                variant="ghost"
-                size="icon"
-                title={spec.label}
-                aria-label={spec.label}
-                aria-pressed={spec.format ? isActive : undefined}
-                data-active={isActive || undefined}
-                disabled={!editor}
-                // Keep the caret: without this the textarea blurs and the
-                // selection that markdown-actions reads is lost.
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => run(spec.actionId)}
-                className={cn(
-                  "size-8 rounded-md text-muted-foreground transition-colors",
-                  "hover:bg-accent hover:text-accent-foreground",
-                  "data-[active]:bg-accent data-[active]:text-accent-foreground",
-                  "disabled:opacity-40",
-                )}
-              >
-                <spec.Icon className="size-4" />
-              </Button>
-            );
-          })}
-        </div>
-      ))}
+      {/* Formatting strip — the only scrollable part, so the pinned controls
+          on the right never slide out of reach on narrow phones. */}
+      <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {GROUPS.map((group, gi) => (
+          <div key={gi} className="flex shrink-0 items-center gap-1">
+            {gi > 0 && (
+              <span aria-hidden className="mx-0.5 h-4 w-px shrink-0 bg-border" />
+            )}
+            {group.map((spec) => {
+              const isActive = spec.format ? activeFormats.includes(spec.format) : false;
+              return (
+                <Button
+                  key={spec.name}
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  title={spec.label}
+                  aria-label={spec.label}
+                  aria-pressed={spec.format ? isActive : undefined}
+                  data-active={isActive || undefined}
+                  disabled={!editor}
+                  // Keep the caret: without this the textarea blurs and the
+                  // selection that markdown-actions reads is lost.
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => run(spec.actionId)}
+                  className={cn(
+                    "size-8 rounded-md text-muted-foreground transition-colors duration-150 ease-out motion-reduce:transition-none",
+                    "hover:bg-accent hover:text-accent-foreground",
+                    "data-[active]:bg-accent data-[active]:text-accent-foreground",
+                    "disabled:opacity-40",
+                  )}
+                >
+                  <spec.Icon className="size-4" />
+                </Button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
 
       <span aria-hidden className="mx-0.5 h-4 w-px shrink-0 bg-border" />
 
@@ -205,7 +240,7 @@ export const EditorToolbar = memo(function EditorToolbar({
             title={`View: ${VIEW_MODES[viewMode].label}`}
             aria-label={`View mode: ${VIEW_MODES[viewMode].label}`}
             onMouseDown={(e) => e.preventDefault()}
-            className="size-8 shrink-0 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            className="size-8 shrink-0 rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:bg-accent hover:text-accent-foreground"
           >
             <CurrentIcon className="size-4" />
           </Button>
@@ -233,6 +268,66 @@ export const EditorToolbar = memo(function EditorToolbar({
           </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Keyboard-open actions — the bottom bar is hidden, these replace it. */}
+      {mobileVisible && (
+        <>
+          <span aria-hidden className="mx-0.5 h-4 w-px shrink-0 bg-border" />
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            title={previewing ? "Back to editing" : "Read mode (Ctrl+/)"}
+            aria-label={previewing ? "Back to editing" : "Toggle read mode"}
+            aria-pressed={previewing}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => switchView(previewing ? "edit" : "preview")}
+            className={cn(
+              "size-8 shrink-0 rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:bg-accent hover:text-accent-foreground",
+              previewing && "text-foreground",
+            )}
+          >
+            <EyeIcon className="size-4" />
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            title={zen ? "Exit zen mode (Ctrl+Shift+Z)" : "Zen mode (Ctrl+Shift+Z)"}
+            aria-label={zen ? "Exit zen mode" : "Enter zen mode"}
+            aria-pressed={zen}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={handleToggleZen}
+            className="size-8 shrink-0 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            {zen ? <Cross className="size-4" /> : <Zen className="size-4" />}
+          </Button>
+
+          {/* Only shows while there is something to save — a permanently
+              disabled Save in a small strip is noise. */}
+          {!autoSave && unsaved && (
+            <Button
+              type="button"
+              size="sm"
+              disabled={loading}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={handleSave}
+              className="h-7 shrink-0 rounded-full px-3 text-xs"
+            >
+              {loading ? (
+                <>
+                  <Loader size="xs" variant="secondary" className="mr-1.5" />
+                  Saving…
+                </>
+              ) : (
+                "Save"
+              )}
+            </Button>
+          )}
+        </>
+      )}
     </div>
   );
 });

@@ -1,7 +1,10 @@
-import { X } from "lucide-react";
+"use client";
+
+import { Plus, X } from "lucide-react";
 import {
   type FocusEvent,
   type KeyboardEvent,
+  type MouseEvent,
   useRef,
   useState,
 } from "react";
@@ -13,14 +16,20 @@ interface Props {
   suggestions: string[];
 }
 
-// Tag input component with suggestions and inline editing support(main component)
+/**
+ * Compact tag input: chips inline with the input, and tapping a suggestion
+ * appends it — no dropdown that fights the keyboard for screen space.
+ *
+ * Tag grammar is unchanged: lowercase, comma or Enter commits, Backspace on
+ * an empty field pops the last chip, double-click a chip to edit it.
+ */
 export function TagInput({ value, onChange, suggestions }: Props) {
   const [input, setInput] = useState<string>("");
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [focused, setFocused] = useState<boolean>(false);
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   // Filter suggestions based on input and existing tags
   const filteredSuggestions = suggestions.filter(
@@ -32,10 +41,10 @@ export function TagInput({ value, onChange, suggestions }: Props) {
 
   const showSuggestions = input.trim() !== "" && filteredSuggestions.length > 0;
 
-  // Add a new tag
+  // Add a new tag — duplicates are silently ignored, they carry no information
   function addTag(tag: string) {
     const newTag = tag.trim().toLowerCase();
-    if (!newTag) return;
+    if (!newTag || value.includes(newTag)) return;
     onChange([...value, newTag]);
     setInput("");
     setHighlightedIndex(-1);
@@ -93,10 +102,7 @@ export function TagInput({ value, onChange, suggestions }: Props) {
   }
 
   // Save tag when editing and press Enter
-  function handleEditKeyDown(
-    e: KeyboardEvent<HTMLInputElement>,
-    index: number,
-  ) {
+  function handleEditKeyDown(e: KeyboardEvent<HTMLInputElement>, index: number) {
     if (e.key === "Enter") {
       e.preventDefault();
       saveEditedTag(index);
@@ -114,16 +120,13 @@ export function TagInput({ value, onChange, suggestions }: Props) {
     setEditingIndex(null);
   }
 
-  // Focus input when container is clicked
-  function handleContainerClick() {
+  // Focus input when container is clicked except its own buttons/inputs
+  function handleContainerClick(e: MouseEvent<HTMLDivElement>) {
+    if (e.target instanceof HTMLInputElement) return;
     inputRef.current?.focus();
   }
 
-  function handleFocus() {
-    setFocused(true);
-  }
-
-  // Handle blur to close suggestions
+  // Handle blur to commit an in-progress edit
   function handleBlur(e: FocusEvent<HTMLDivElement>) {
     if (
       e.relatedTarget &&
@@ -131,112 +134,116 @@ export function TagInput({ value, onChange, suggestions }: Props) {
     ) {
       return;
     }
-    setFocused(false);
+    if (editingIndex !== null) {
+      saveEditedTag(editingIndex);
+    }
     setHighlightedIndex(-1);
   }
 
-  // suggestions visibility is derived from input — no effect needed
-
   return (
     <div
-      className="relative flex flex-wrap gap-2 cursor-text items-start text-[12px] rounded-xl w-full border border-border p-2"
+      className="relative flex cursor-text flex-col rounded-2xl border border-border/60 bg-background/50 transition-colors focus-within:border-ring/60 focus-within:bg-background"
       onClick={handleContainerClick}
       onBlur={handleBlur}
       tabIndex={-1}
+      onDoubleClick={(e) => e.stopPropagation()}
     >
-      {/* Render tags */}
-      {value.map((tag, index) => (
-        <span
-          key={index}
-          className="flex items-center bg-border px-2 py-1 rounded-full"
-        >
-          {editingIndex === index ? (
-            <input
-              className="outline-none border-none bg-transparent"
-              value={tag}
-              autoFocus
-              onFocus={handleFocus}
-              onChange={(e) => updateTag(index, e.target.value)}
-              onKeyDown={(e) => handleEditKeyDown(e, index)}
-              onBlur={() => saveEditedTag(index)}
-              aria-label={`Edit tag ${tag}`}
-            />
-          ) : (
-            <span
-              className="select-none"
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                setEditingIndex(index);
-              }}
-            >
-              {tag}
-            </span>
-          )}
-          {/* Remove tag button */}
-          {focused && (
+      <div className="flex flex-wrap items-center gap-1.5 p-1.5">
+        {/* Render tags */}
+        {value.map((tag, index) => (
+          <span
+            key={`${tag}-${index}`}
+            className="flex h-7 items-center gap-0.5 rounded-full bg-muted pl-2.5 pr-1 text-xs font-medium"
+          >
+            {editingIndex === index ? (
+              <input
+                ref={editInputRef}
+                size={Math.max(2, tag.length)}
+                className="w-auto min-w-8 bg-transparent text-xs outline-none"
+                value={tag}
+                autoFocus
+                onChange={(e) => updateTag(index, e.target.value)}
+                onKeyDown={(e) => handleEditKeyDown(e, index)}
+                onBlur={() => saveEditedTag(index)}
+                aria-label={`Edit tag ${tag}`}
+              />
+            ) : (
+              <span
+                className="select-none cursor-text"
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setEditingIndex(index);
+                }}
+                title="Double-tap to edit"
+              >
+                {tag}
+              </span>
+            )}
+            {/* Remove tag button */}
             <button
               type="button"
-              onMouseDown={(e) => {
-                e.preventDefault();
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation();
                 removeTag(index);
               }}
               aria-label={`Remove tag ${tag}`}
               title={`Remove tag ${tag}`}
-              className="ml-1 transition-opacity cursor-pointer rounded-full bg-foreground text-background p-1"
+              className="-ml-0.5 cursor-pointer rounded-full bg-foreground/10 p-0.5 transition-colors hover:bg-foreground/20"
             >
-              <X className="w-3 h-3" />
+              <X className="size-3" />
             </button>
-          )}
-        </span>
-      ))}
+          </span>
+        ))}
 
-      {/* Input field */}
-      <div className="relative flex-grow min-w-[100px]">
-        <input
-          enterKeyHint="done"
-          ref={inputRef}
-          className="outline-none border-none py-1 w-full bg-transparent"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onFocus={handleFocus}
-          name="tags"
-          id="tag-input"
-          autoComplete="off"
-          aria-label="Add tag"
-        />
-
-        {/* Suggestion dropdown */}
-        {showSuggestions && (
-          <div className="absolute z-10 mt-1 w-full rounded-md border border-border bg-popover shadow-md max-h-48 overflow-y-auto text-popover-foreground">
-            {filteredSuggestions.map((sug, i) => (
-              <div
-                key={sug}
-                role="option"
-                aria-selected={i === highlightedIndex}
-                className={`px-3 py-2 cursor-pointer hover:bg-muted ${
-                  i === highlightedIndex
-                    ? "bg-accent text-accent-foreground"
-                    : ""
-                }`}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  addTag(sug);
-                }}
-                onMouseEnter={() => setHighlightedIndex(i)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    addTag(sug);
-                  }
-                }}
-              >
-                {sug}
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Input field */}
+        <div className="flex min-w-28 flex-1 items-center gap-1.5">
+          <Plus className="size-3.5 shrink-0 text-muted-foreground/40" aria-hidden />
+          <input
+            enterKeyHint="done"
+            autoCapitalize="none"
+            ref={inputRef}
+            className="h-8 min-w-8 flex-1 bg-transparent py-1 text-sm outline-none"
+            placeholder={value.length === 0 ? "Add tags…" : ""}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            name="tags"
+            id="tag-input"
+            autoComplete="off"
+            aria-label="Add tag"
+          />
+        </div>
       </div>
+
+      {/* Suggestion strip — a compact row of chips instead of a dropdown */}
+      {showSuggestions && (
+        <div className="flex flex-wrap items-center gap-1.5 border-t px-2.5 pb-2 pt-2">
+          <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground/50">
+            Suggestions
+          </span>
+          {filteredSuggestions.slice(0, 8).map((sug, i) => (
+            <button
+              key={sug}
+              type="button"
+              role="option"
+              aria-selected={i === highlightedIndex}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation();
+                addTag(sug);
+              }}
+              className={`cursor-pointer rounded-full border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground ${
+                i === highlightedIndex
+                  ? "border-ring/60 bg-accent text-accent-foreground"
+                  : "border-border/60"
+              }`}
+            >
+              {sug}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

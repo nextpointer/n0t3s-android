@@ -81,6 +81,15 @@ function NotePage() {
   const { save } = useNoteOperations();
   UseAIShortcuts();
 
+  // The command palette and the keyboard-toolbar Save button both trigger
+  // saves through this event — those components don't receive `save` as a
+  // prop because they render one level above the page that owns it.
+  useEffect(() => {
+    const handler = () => save(false);
+    window.addEventListener("note:save", handler);
+    return () => window.removeEventListener("note:save", handler);
+  }, [save]);
+
   // for fetching the notes
   useEffect(() => {
     let cancelled = false;

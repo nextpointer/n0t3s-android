@@ -501,7 +501,14 @@ export const NoteContent = memo(
         // disagree about whether that shrinks the layout viewport.
         const typing =
           editorRef.current?.textarea === document.activeElement;
-        setKeyboardOpen(typing && overlay > 24);
+        const open = typing && overlay > 24;
+        setKeyboardOpen(open);
+        // The bottom action bar (NoteActions) listens for this and hides
+        // while the keyboard is up — its remaining buttons live in the
+        // toolbar row pinned above the keyboard instead.
+        window.dispatchEvent(
+          new CustomEvent("note:keyboard", { detail: open }),
+        );
       };
 
       // The keyboard is laid out after the focus change that asked for it, so

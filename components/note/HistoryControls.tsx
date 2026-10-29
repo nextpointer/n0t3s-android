@@ -39,7 +39,7 @@ export const HistoryControls = memo(function HistoryControls() {
     <>
       <Button
         variant="ghost"
-        size="sm"
+        size="icon"
         onClick={handleUndo}
         disabled={!canUndo}
         aria-label="Undo"
@@ -49,7 +49,7 @@ export const HistoryControls = memo(function HistoryControls() {
       </Button>
       <Button
         variant="ghost"
-        size="sm"
+        size="icon"
         onClick={handleRedo}
         disabled={!canRedo}
         aria-label="Redo"

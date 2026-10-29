@@ -53,12 +53,12 @@ export const NoteHeader = memo(function NoteHeader() {
       <div className="flex items-center gap-2">
         <Button
           variant="ghost"
+          size="icon"
           onClick={() => router.push("/help")}
           aria-label="Help and shortcuts"
           title="Help & shortcuts (?)"
-          className="w-auto shadow-none "
         >
-          <HelpCircle />
+          <HelpCircle className="w-4 h-4" />
         </Button>
         <HistoryControls />
         <SettingsMenu />

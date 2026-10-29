@@ -1,68 +1,154 @@
-import React from "react";
+"use client";
+
+import { useCallback, useEffect, useRef } from "react";
 import { Note } from "@/lib/types";
-import { Pin } from "lucide-react";
+import { Check, Pin } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Props = {
   note: Note;
   onClick: () => void;
+  /** Selection mode comes from a long-press anywhere in the list. */
+  selectMode?: boolean;
+  selected?: boolean;
+  onSelectToggle?: (id: string) => void;
+  onLongPress?: (id: string) => void;
 };
 
-const NoteCard = React.memo(function NoteCard({ note, onClick }: Props) {
+/** How long a press must be held before it becomes a selection. */
+const LONG_PRESS_MS = 450;
+
+function relativeTime(ts: number): string {
+  const minutes = Math.floor((Date.now() - ts) / 60000);
+  if (minutes < 1) return "now";
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  return new Date(ts).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+const NoteCard = ({
+  note,
+  onClick,
+  selectMode = false,
+  selected = false,
+  onSelectToggle,
+  onLongPress,
+}: Props) => {
   const isPinned = note.tags?.includes("pin");
   const otherTags = note.tags?.filter((t) => t !== "pin") ?? [];
-  const maxTagsToShow = 2;
+
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Set when the hold fires; the click that follows the lift is swallowed so
+  // a long-press never also opens (or toggles) the row.
+  const longFired = useRef(false);
+
+  const clearPress = useCallback(() => {
+    if (pressTimer.current !== undefined) {
+      clearTimeout(pressTimer.current);
+      pressTimer.current = undefined;
+    }
+  }, []);
+
+  useEffect(() => clearPress, [clearPress]);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (!selectMode && !onLongPress) return;
+    longFired.current = false;
+    clearPress();
+    pressTimer.current = setTimeout(() => {
+      longFired.current = true;
+      navigator.vibrate?.(8);
+      onLongPress?.(note.id);
+    }, LONG_PRESS_MS);
+  };
+
+  const handleActivate = () => {
+    if (longFired.current) {
+      longFired.current = false;
+      return;
+    }
+    if (selectMode) {
+      onSelectToggle?.(note.id);
+      return;
+    }
+    onClick();
+  };
 
   return (
     <div
-      onClick={onClick}
+      onPointerDown={handlePointerDown}
+      onPointerUp={clearPress}
+      onPointerLeave={clearPress}
+      onPointerCancel={clearPress}
+      onClick={handleActivate}
+      onContextMenu={(e) => e.preventDefault()}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onClick();
+          handleActivate();
         }
       }}
-      role="link"
+      role="option"
+      aria-selected={selectMode ? selected : undefined}
       tabIndex={0}
-      className="group relative cursor-pointer px-3 sm:px-4 py-2.5 sm:py-3 bg-background/40 hover:bg-accent/30 border border-dashed border-border/40 hover:border-border/60 transition-all duration-200 rounded-[14px] sm:rounded-[16px] backdrop-blur-sm active:scale-[0.99] overflow-hidden"
+      className={cn(
+        "group relative flex w-full cursor-pointer select-none items-center gap-3 rounded-xl px-3 py-2.5",
+        "transition-colors duration-150 ease-out motion-reduce:transition-none",
+        "hover:bg-accent/40 active:bg-accent/70",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        selected && "bg-primary/10 hover:bg-primary/15",
+      )}
     >
-      <div className="flex items-start justify-between gap-2 sm:gap-3 w-full">
-        <div className="flex-1 min-w-0 overflow-hidden">
-          <h3 className="font-medium text-[13px] sm:text-[14px] text-foreground/90 truncate tracking-tight leading-snug">
-            {note.title}
-          </h3>
-          <p className="text-[10px] sm:text-[11px] text-muted-foreground/50 font-medium tracking-wide mt-0.5">
-            {new Date(note.createdAt).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}
-          </p>
-        </div>
-        {(isPinned || otherTags.length > 0) && (
-          <div className="flex flex-wrap gap-1 items-start justify-end max-w-[120px] sm:max-w-[140px] flex-shrink-0">
-            {isPinned && (
-              <span className="text-[9px] sm:text-[10px] bg-foreground text-background px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-semibold tracking-wider uppercase whitespace-nowrap">
-                <Pin className="h-3 w-3" />
+      {/* Selection indicator — only while picking notes to delete */}
+      {selectMode && (
+        <span
+          aria-hidden
+          className={cn(
+            "flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+            selected
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border/70",
+          )}
+        >
+          {selected && <Check className="size-3" strokeWidth={3} />}
+        </span>
+      )}
+
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <h3 className="truncate text-[15px] font-medium leading-tight">
+          {note.title || "Untitled"}
+        </h3>
+        <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground/50">
+          <time dateTime={new Date(note.updatedAt).toISOString()}>
+            {relativeTime(note.updatedAt)}
+          </time>
+          {otherTags.length > 0 && (
+            <>
+              <span aria-hidden>·</span>
+              <span className="truncate">
+                {otherTags.map((t) => `#${t}`).join(" ")}
               </span>
-            )}
-            {otherTags.slice(0, maxTagsToShow).map((tag) => (
-              <span
-                key={tag}
-                className="text-[9px] sm:text-[10px] bg-muted/60 text-muted-foreground/70 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full font-medium tracking-wide truncate max-w-[60px] sm:max-w-[80px]"
-                title={tag}
-              >
-                {tag}
-              </span>
-            ))}
-            {otherTags.length > maxTagsToShow && (
-              <span className="text-[9px] sm:text-[10px] text-muted-foreground/40 font-semibold whitespace-nowrap">
-                +{otherTags.length - maxTagsToShow}
-              </span>
-            )}
-          </div>
-        )}
+            </>
+          )}
+        </p>
       </div>
+
+      {isPinned && (
+        <Pin
+          aria-label="Pinned"
+          className="size-3.5 shrink-0 rotate-45 text-primary/60"
+          fill="currentColor"
+        />
+      )}
     </div>
   );
-});
+};
 
 export default NoteCard;

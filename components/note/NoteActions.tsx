@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
@@ -9,26 +9,30 @@ import {
   unsavedAtom,
   saveLoadingAtom,
   autoSaveAtom,
+  viewModeAtom,
+  toolbarEnabledAtom,
   zenMode,
   search,
-  toolbarEnabledAtom,
-  viewModeAtom,
   persistZenMode,
-  persistToolbarEnabled,
 } from "@/store/noteAtom";
 import { Cross } from "../icons/Cross";
 import { Zen } from "../icons/Zen";
 import { Search } from "../icons/Search";
-import { EyeIcon, ToolbarIcon } from "../icons/EditorIcons";
+import { EyeIcon } from "../icons/EditorIcons";
 
 interface NoteActionsProps {
   save: (isAutoSave?: boolean) => void;
 }
 
-export const NoteActions = memo(function NoteActions({ save }: NoteActionsProps) {
-  // zen mode state
+/**
+ * One shared class for every square hit-tap in the bar so all icons behave
+ * and breathe identically.
+ */
+const ACTION_BTN =
+  "rounded-lg p-2 text-foreground/60 transition-colors duration-150 ease-out motion-reduce:transition-none hover:bg-accent hover:text-foreground active:scale-[0.96] disabled:pointer-events-none";
+
+export const NoteActions = memo(function NoteActions({ save }: NoteActionsProps) {  // zen mode state
   const [zen, setZenMode] = useAtom(zenMode);
-  const [toolbarEnabled, setToolbarEnabled] = useAtom(toolbarEnabledAtom);
   const [viewMode, setViewMode] = useAtom(viewModeAtom);
 
   const handleToggleZen = useCallback(() => {
@@ -42,11 +46,6 @@ export const NoteActions = memo(function NoteActions({ save }: NoteActionsProps)
     setViewMode(previewing ? "edit" : "preview");
   }, [previewing, setViewMode]);
 
-  const handleToggleToolbar = useCallback(() => {
-    const next = !toolbarEnabled;
-    setToolbarEnabled(next);
-    persistToolbarEnabled(next);
-  }, [toolbarEnabled, setToolbarEnabled]);
   // getter
   const unsaved = useAtomValue(unsavedAtom);
   const loading = useAtomValue(saveLoadingAtom);
@@ -58,17 +57,34 @@ export const NoteActions = memo(function NoteActions({ save }: NoteActionsProps)
     save(false);
   }, [save]);
 
+  /**
+   * While the software keyboard is up, the bottom bar sits underneath it —
+   * the toolbar pinned above the keyboard hosts the same actions, so this
+   * bar steps aside (NoteContent broadcasts "note:keyboard"). Only step
+   * aside when that toolbar is actually visible to host them.
+   */
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const toolbarEnabled = useAtomValue(toolbarEnabledAtom);
+  useEffect(() => {
+    const handler = (e: Event) =>
+      setKeyboardOpen(Boolean((e as CustomEvent).detail));
+    window.addEventListener("note:keyboard", handler);
+    return () => window.removeEventListener("note:keyboard", handler);
+  }, []);
+
+  if (keyboardOpen && toolbarEnabled && viewMode !== "preview") return null;
+
   return (
-    <div className="md:relative fixed right-8 bottom-3 md:bottom-0 left-0 flex flex-row h-16 pb-1 gap-4 items-center justify-end z-30 ">
+    <div className="md:relative fixed right-3 bottom-2 md:bottom-0 left-0 flex flex-row h-16 pb-1 gap-1 items-center justify-end z-30 px-1">
       {!zen && (
         <button
           type="button"
           onClick={() => setSearchOpen(true)}
           aria-label="Search notes"
           title="Search notes (Ctrl+P)"
-          className="mt-10 cursor-pointer py-0.5 p-0.5 rounded-full"
+          className={cn("size-9 cursor-pointer", ACTION_BTN)}
         >
-          <Search className="size-4 pointer-events-none text-foreground/70" />
+          <Search className="size-4 pointer-events-none" />
         </button>
       )}
 
@@ -78,60 +94,35 @@ export const NoteActions = memo(function NoteActions({ save }: NoteActionsProps)
         aria-pressed={previewing}
         aria-label="Toggle read mode"
         title="Read mode (Ctrl+/)"
-        className="mt-10 cursor-pointer py-0.5 p-0.5 rounded-full"
+        className={cn("size-9 cursor-pointer", ACTION_BTN)}
       >
         <EyeIcon
           className={cn(
-            "size-4 pointer-events-none transition-colors",
-            previewing ? "text-foreground" : "text-foreground/30",
+            "size-4 pointer-events-none",
+            previewing ? "text-foreground" : "",
           )}
         />
       </button>
 
       <button
         type="button"
-        onClick={handleToggleToolbar}
-        aria-pressed={toolbarEnabled}
-        aria-label="Toggle formatting toolbar"
-        title="Toggle formatting toolbar"
-        className="mt-10 cursor-pointer py-0.5 p-0.5 rounded-full"
+        onClick={handleToggleZen}
+        aria-pressed={zen}
+        aria-label={zen ? "Exit zen mode" : "Enter zen mode"}
+        title="Zen mode (Ctrl+Shift+Z)"
+        className={cn("size-9 cursor-pointer", ACTION_BTN)}
       >
-        <ToolbarIcon
-          className={cn(
-            "size-4 pointer-events-none transition-colors",
-            toolbarEnabled
-              ? "text-foreground"
-              : "text-foreground/30",
-          )}
-        />
-      </button>
-
-      {zen ? (
-        <button
-          type="button"
-          onClick={handleToggleZen}
-          aria-label="Exit zen mode"
-          title="Exit zen mode (Ctrl+Shift+Z)"
-          className="mt-10 cursor-pointer py-0.5 p-0.5 rounded-full"
-        >
-          <Cross className="size-4 pointer-events-none text-foreground/70" />
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={handleToggleZen}
-          aria-label="Enter zen mode"
-          title="Zen mode (Ctrl+Shift+Z)"
-          className="mt-10 cursor-pointer py-0.5 p-0.5 rounded-full"
-        >
+        {zen ? (
+          <Cross className="size-4 pointer-events-none text-foreground" />
+        ) : (
           <Zen className="size-4 pointer-events-none" />
-        </button>
-      )}
+        )}
+      </button>
 
       {!zen && !autoSave && (
         <Button
           variant={unsaved ? "default" : "ghost"}
-          className="text-xs sm:text-sm rounded-full py-0.1 mt-10"
+          className="text-xs rounded-full py-0.1 shrink-0"
           onClick={handleSave}
           disabled={!unsaved || loading}
         >

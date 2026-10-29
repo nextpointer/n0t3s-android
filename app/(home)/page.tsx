@@ -6,7 +6,7 @@ import { allTagsAtom } from "@/store/noteAtom";
 import { getNotes, createNote } from "@/lib/storage";
 import { Note } from "@/lib/types";
 import { ModeToggle } from "@/components/Theme-Mode";
-import { Github } from "lucide-react";
+import { Heart } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -55,6 +55,13 @@ export default function Home() {
     router.push(`/note/?id=${note.id}`);
   }, [router]);
 
+  // Multi-delete in the list removes notes from the page state directly,
+  // without a full reload.
+  const handleNotesDeleted = useCallback((ids: string[]) => {
+    const removed = new Set(ids);
+    setNotes((prev) => prev.filter((n) => !removed.has(n.id)));
+  }, []);
+
   return (
     <>
       <title>n0t3s</title>
@@ -63,22 +70,6 @@ export default function Home() {
         <div className="flex flex-row justify-end items-center gap-2 md:fixed md:top-0 left-0 w-full  md:w-3xl md:left-1/2 md:-translate-x-1/2 z-50 md:border-b-1 md:border-dashed sm:p-4">
           <h1 className="mr-auto text-2xl font-semibold">N0T3S</h1>
           <ModeToggle />
-          <Button
-            variant={"outline"}
-            className="p-3"
-            asChild
-            aria-label="Project on GitHub"
-            title="Project on GitHub"
-          >
-            <Link
-              href="https://github.com/nextpointer/n0t3s?tab=readme-ov-file#-n0t3s"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center m-0 p-0"
-            >
-              <Github />
-            </Link>
-          </Button>
           <Button
             onClick={handleNewNote}
             aria-label="New note"
@@ -106,14 +97,30 @@ export default function Home() {
         <CommandMenu open={searchOpen} setOpen={setSearchOpen} notes={notes} noteId={null} />
 
         {/* Content */}
-        <div className="w-full mt-6 overflow-y-scroll overflow-x-hidden px-4 py-4">
+        <div className="w-full mt-6 flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 pb-4 flex flex-col">
           <NotesList
             notes={notes}
             orderBy={orderBy}
             tagFilter={tagFilter}
             loading={loading}
+            onDeleted={handleNotesDeleted}
           />
         </div>
+
+        {/* Footer */}
+        <footer className="flex w-full items-center justify-center gap-1.5 pb-4 pt-2 text-[11px] text-muted-foreground/60">
+          <span>built with</span>
+          <Heart className="size-3 fill-current text-primary/70" aria-hidden />
+          <span aria-hidden>·</span>
+          <Link
+            href="https://github.com/nextpointer/n0t3s-android"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 transition-colors hover:text-foreground"
+          >
+            GitHub
+          </Link>
+        </footer>
       </div>
     </>
   );
