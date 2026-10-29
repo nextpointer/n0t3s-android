@@ -97,6 +97,15 @@ bun run android:debug
 adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
+Alternatively, let the committed GitHub Actions workflow do it: every push
+builds a debug APK (download as the `app-debug` artifact), and pushing a
+version tag publishes a Release with a versioned APK:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0      # → Release "N0T3S v0.1.0" with n0t3s-v0.1.0-debug.apk
+```
+
 Anything you change in the web app needs a re-sync (`bun run android:build`)
 before it appears in the APK — the WebView serves the copied `out/` assets.
 

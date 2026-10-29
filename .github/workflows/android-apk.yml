@@ -1,11 +1,16 @@
 name: Android debug APK
 
-# Builds the offline debug APK on every push (and on demand) so it can be
-# grabbed from the Actions page and installed straight on a phone — no local
-# JDK/Android SDK needed.
+# Builds the offline debug APK on every push (artifact "app-debug", for quick
+# phone testing). Pushing a version tag (v*) additionally publishes a GitHub
+# Release whose APK carries the version in its file name, e.g.
+# n0t3s-v0.1.0-debug.apk.
 on:
   push:
   workflow_dispatch:
+
+# needed to create GitHub Releases on tag pushes
+permissions:
+  contents: write
 
 jobs:
   apk:
@@ -26,13 +31,19 @@ jobs:
           java-version: "21"
           cache: gradle
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK components
+      # GitHub runners already ship the Android SDK (cmdline-tools included).
+      # Accept the licenses and install the components Capacitor 7 needs that
+      # the image may miss. The dedicated setup-android action is avoided on
+      # purpose: it currently fails because it still tries to install the
+      # retired legacy "tools" package.
+      - name: Ensure Android SDK components
         run: |
-          yes | sdkmanager --licenses >/dev/null
-          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+          SDK="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          SM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SM" --licenses >/dev/null
+          if [ ! -d "$SDK/platforms/android-35" ] || [ ! -d "$SDK/build-tools/35.0.0" ]; then
+            "$SM" "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+          fi
 
       - name: Install web dependencies
         run: bun install
@@ -40,7 +51,26 @@ jobs:
       - name: Build debug APK (next build + cap sync + gradlew assembleDebug)
         run: bun run android:debug
 
-      - name: Upload debug APK
+      # Release path: name the APK after the version, then publish it.
+      - name: Name the APK after the version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$VER" >> "$GITHUB_ENV"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "n0t3s-v$VER-debug.apk"
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "n0t3s-v${VERSION}-debug.apk" \
+            --title "N0T3S v${VERSION}" \
+            --notes "Offline debug APK (no signing yet). Installs on Android 6.0+."
+
+      # Every run: quick-download artifact from the Actions page.
+      - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
