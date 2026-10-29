@@ -133,7 +133,7 @@ export default function HelpPage() {
             <ArrowLeft className="w-3 h-3" />
             back
           </Button>
-          <span className="ml-3 text-xs font-mono text-foreground/30">
+          <span className="ml-3 text-xs font-mono text-foreground/60">
             manual.md
           </span>
         </header>

@@ -716,8 +716,8 @@ export const NoteContent = memo(
           style={{ width: "100%", zIndex: 20, fontFamily: "'Jetbrains Mono', 'Space Mono', monospace" }}
         >
           <div
-            className="flex flex-col xl:flex-row gap-1 xl:gap-4 text-[8px] xl:text-[10px] tracking-[0.2em] pointer-events-auto xl:w-full w-32 "
-            style={{ color: "var(--editor-text)", opacity: 0.4 }}
+            className="flex flex-col xl:flex-row gap-1 xl:gap-4 text-[10px] xl:text-[10px] tracking-[0.15em] pointer-events-auto xl:w-full w-32 "
+            style={{ color: "var(--editor-text)", opacity: 0.55 }}
           >
             <div className="flex flex-row items-center">
               <span>{stats.words} words</span>

@@ -38,7 +38,7 @@ function CommandInput({
         data-slot="command-input"
         className={cn(
           "flex h-12 w-full bg-transparent text-sm outline-none",
-          "placeholder:text-muted-foreground/50",
+          "placeholder:text-muted-foreground/60",
           "disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
@@ -86,9 +86,9 @@ function CommandGroup({
       data-slot="command-group"
       className={cn(
         "text-foreground overflow-hidden",
-        "[[cmdk-group-heading]]:px-3 [[cmdk-group-heading]]:pb-1 [[cmdk-group-heading]]:pt-3",
-        "[[cmdk-group-heading]]:text-[10px] [[cmdk-group-heading]]:font-medium [[cmdk-group-heading]]:uppercase",
-        "[[cmdk-group-heading]]:tracking-[0.2em] [[cmdk-group-heading]]:text-muted-foreground/40",
+        "[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-3",
+        "[&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase",
+        "[&_[cmdk-group-heading]]:tracking-[0.14em] [&_[cmdk-group-heading]]:text-muted-foreground",
         className,
       )}
       {...props}
@@ -104,7 +104,7 @@ function CommandItem({
     <CommandPrimitive.Item
       data-slot="command-item"
       className={cn(
-        "relative flex min-h-10 cursor-pointer select-none items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm outline-none",
+        "relative mx-1.5 flex min-h-11 cursor-pointer select-none items-center gap-3 rounded-lg px-2.5 py-2 text-sm outline-none",
         "data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground",
         "data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -136,7 +136,7 @@ function CommandShortcut({
     <span
       data-slot="command-shortcut"
       className={cn(
-        "ml-auto font-mono text-[10px] tracking-widest text-muted-foreground/40",
+        "ml-auto font-mono text-[10px] tracking-widest text-muted-foreground/60",
         className,
       )}
       {...props}

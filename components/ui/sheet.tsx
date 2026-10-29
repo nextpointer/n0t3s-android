@@ -54,7 +54,7 @@ function SheetOverlay({
 const SIDE_CLASSES: Record<"top" | "bottom" | "left" | "right", string> = {
   top: "inset-x-0 top-0 border-b rounded-b-[22px]",
   bottom:
-    "inset-x-0 bottom-0 border-t rounded-t-[22px] pt-7 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]",
+    "inset-x-0 bottom-0 border-t border-x rounded-t-[22px] pt-7 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] w-full mx-auto sm:max-w-[40rem]",
   left: "inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm",
   right: "inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm",
 };
@@ -124,7 +124,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-header"
-      className={cn("flex flex-col gap-0.5 text-left", className)}
+      className={cn("flex flex-col gap-1 pr-10 text-left", className)}
       {...props}
     />
   );
@@ -134,7 +134,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="sheet-footer"
-      className={cn("flex flex-col gap-2", className)}
+      className={cn("flex flex-col gap-2 pb-1", className)}
       {...props}
     />
   );
@@ -147,7 +147,7 @@ function SheetTitle({
   return (
     <SheetPrimitive.Title
       data-slot="sheet-title"
-      className={cn("text-base leading-none font-semibold", className)}
+      className={cn("text-[17px] leading-tight font-semibold tracking-[-0.01em]", className)}
       {...props}
     />
   );
@@ -160,7 +160,7 @@ function SheetDescription({
   return (
     <SheetPrimitive.Description
       data-slot="sheet-description"
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-[13px] leading-snug text-muted-foreground", className)}
       {...props}
     />
   );

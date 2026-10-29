@@ -221,12 +221,12 @@ export const CommandMenu = React.memo(function CommandMenu({
   const renderItem = (item: Item) => (
     <CommandItem key={item.id} value={item.id} onSelect={() => run(item)}>
       {item.icon && (
-        <item.icon className="shrink-0 size-4 text-muted-foreground/60" />
+        <item.icon className="shrink-0 size-4 text-muted-foreground" />
       )}
       <span className="flex min-w-0 flex-1 items-baseline gap-2 overflow-hidden">
         <span className="truncate">{item.label}</span>
         {item.kind === "tag" && (
-          <span className="text-xs text-muted-foreground/40">#{item.tag}</span>
+          <span className="text-xs text-muted-foreground/60">#{item.tag}</span>
         )}
       </span>
       {item.shortcut && (
@@ -247,7 +247,7 @@ export const CommandMenu = React.memo(function CommandMenu({
       <span className="flex min-w-0 flex-col overflow-hidden">
         <span className="truncate text-sm">{item.label}</span>
         {item.sub && (
-          <span className="truncate text-xs text-muted-foreground/40">
+          <span className="truncate text-xs text-muted-foreground/60">
             {item.sub}
           </span>
         )}
@@ -289,7 +289,7 @@ export const CommandMenu = React.memo(function CommandMenu({
             )}
           </CommandList>
         </Command>
-        <div className="border-t px-4 pt-2 text-[10px] tracking-widest text-muted-foreground/30 hidden sm:flex items-center gap-3 uppercase">
+        <div className="border-t px-4 pt-2 text-[10px] tracking-widest text-muted-foreground/50 hidden sm:flex items-center gap-3 uppercase">
           <span>↑↓ Navigate</span>
           <span>↵ Select</span>
           <span>Esc Close</span>

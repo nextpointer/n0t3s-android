@@ -218,7 +218,7 @@ export const EditorToolbar = memo(function EditorToolbar({
                     "size-8 rounded-md text-muted-foreground transition-colors duration-150 ease-out motion-reduce:transition-none",
                     "hover:bg-accent hover:text-accent-foreground",
                     "data-[active]:bg-accent data-[active]:text-accent-foreground",
-                    "disabled:opacity-40",
+                    "disabled:opacity-50",
                   )}
                 >
                   <spec.Icon className="size-4" />

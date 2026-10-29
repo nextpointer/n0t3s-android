@@ -178,7 +178,7 @@ export const SettingsMenu = memo(function SettingsMenu() {
           </SheetHeader>
 
           <div className="flex flex-col gap-1.5">
-            <p className="pb-0.5 pl-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/50">
+            <p className="pb-0.5 pl-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
               This note
             </p>
 
@@ -229,7 +229,7 @@ export const SettingsMenu = memo(function SettingsMenu() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <p className="pb-0.5 pl-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/50">
+            <p className="pb-0.5 pl-1 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
               Global
             </p>
 

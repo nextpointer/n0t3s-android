@@ -198,7 +198,7 @@ export function TagInput({ value, onChange, suggestions }: Props) {
 
         {/* Input field */}
         <div className="flex min-w-28 flex-1 items-center gap-1.5">
-          <Plus className="size-3.5 shrink-0 text-muted-foreground/40" aria-hidden />
+          <Plus className="size-3.5 shrink-0 text-muted-foreground/60" aria-hidden />
           <input
             enterKeyHint="done"
             autoCapitalize="none"
@@ -216,32 +216,34 @@ export function TagInput({ value, onChange, suggestions }: Props) {
         </div>
       </div>
 
-      {/* Suggestion strip — a compact row of chips instead of a dropdown */}
+      {/* Suggestion strip — label above a compact row of chips */}
       {showSuggestions && (
-        <div className="flex flex-wrap items-center gap-1.5 border-t px-2.5 pb-2 pt-2">
-          <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground/50">
+        <div className="border-t border-border/60 px-3 pb-2 pt-2">
+          <div className="pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">
             Suggestions
-          </span>
-          {filteredSuggestions.slice(0, 8).map((sug, i) => (
-            <button
-              key={sug}
-              type="button"
-              role="option"
-              aria-selected={i === highlightedIndex}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => {
-                e.stopPropagation();
-                addTag(sug);
-              }}
-              className={`cursor-pointer rounded-full border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground ${
-                i === highlightedIndex
-                  ? "border-ring/60 bg-accent text-accent-foreground"
-                  : "border-border/60"
-              }`}
-            >
-              {sug}
-            </button>
-          ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {filteredSuggestions.slice(0, 8).map((sug, i) => (
+              <button
+                key={sug}
+                type="button"
+                role="option"
+                aria-selected={i === highlightedIndex}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  addTag(sug);
+                }}
+                className={`cursor-pointer rounded-full border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground ${
+                  i === highlightedIndex
+                    ? "border-ring/60 bg-accent text-accent-foreground"
+                    : "border-border/60"
+                }`}
+              >
+                {sug}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -18,6 +18,9 @@ type Props = {
 /** How long a press must be held before it becomes a selection. */
 const LONG_PRESS_MS = 450;
 
+/** Row height is FIXED so the virtualizer's math and the DOM agree. */
+export const NOTE_ROW_HEIGHT = 64;
+
 function relativeTime(ts: number): string {
   const minutes = Math.floor((Date.now() - ts) / 60000);
   if (minutes < 1) return "now";
@@ -95,14 +98,16 @@ const NoteCard = ({
           handleActivate();
         }
       }}
-      role="option"
-      aria-selected={selectMode ? selected : undefined}
+      role="button"
+      aria-pressed={selectMode ? selected : undefined}
       tabIndex={0}
+      style={{ height: NOTE_ROW_HEIGHT }}
       className={cn(
-        "group relative flex w-full cursor-pointer select-none items-center gap-3 rounded-xl px-3 py-2.5",
+        "group relative flex w-full cursor-pointer select-none items-center gap-3 px-3 sm:px-4",
+        "border-b border-border/40",
         "transition-colors duration-150 ease-out motion-reduce:transition-none",
-        "hover:bg-accent/40 active:bg-accent/70",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        "hover:bg-accent/50 active:bg-accent",
+        "focus-visible:outline-none focus-visible:bg-accent/60",
         selected && "bg-primary/10 hover:bg-primary/15",
       )}
     >
@@ -114,7 +119,7 @@ const NoteCard = ({
             "flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
             selected
               ? "border-primary bg-primary text-primary-foreground"
-              : "border-border/70",
+              : "border-foreground/30",
           )}
         >
           {selected && <Check className="size-3" strokeWidth={3} />}
@@ -122,10 +127,10 @@ const NoteCard = ({
       )}
 
       <div className="min-w-0 flex-1 overflow-hidden">
-        <h3 className="truncate text-[15px] font-medium leading-tight">
+        <h3 className="truncate text-[15px] font-medium leading-tight text-foreground">
           {note.title || "Untitled"}
         </h3>
-        <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground/50">
+        <p className="mt-1 flex items-center gap-1.5 truncate text-[13px] leading-tight text-muted-foreground/60">
           <time dateTime={new Date(note.updatedAt).toISOString()}>
             {relativeTime(note.updatedAt)}
           </time>
@@ -143,7 +148,7 @@ const NoteCard = ({
       {isPinned && (
         <Pin
           aria-label="Pinned"
-          className="size-3.5 shrink-0 rotate-45 text-primary/60"
+          className="size-3.5 shrink-0 rotate-45 text-primary"
           fill="currentColor"
         />
       )}

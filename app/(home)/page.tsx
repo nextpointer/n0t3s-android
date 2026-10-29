@@ -80,8 +80,9 @@ export default function Home() {
           </Button>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-row w-full gap-2 mt-12 justify-start items-center">
+        {/* Filters — the top bar is fixed from md up, so desktop keeps the
+            taller offset */}
+        <div className="flex flex-row w-full gap-2 mt-6 md:mt-12 justify-start items-center">
           <NotesFilters
             loading={loading}
             allTags={allTags}
@@ -108,9 +109,9 @@ export default function Home() {
         </div>
 
         {/* Footer */}
-        <footer className="flex w-full items-center justify-center gap-1.5 pb-4 pt-2 text-[11px] text-muted-foreground/60">
+        <footer className="flex w-full items-center justify-center gap-1.5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] text-[11px] text-muted-foreground">
           <span>built with</span>
-          <Heart className="size-3 fill-current text-primary/70" aria-hidden />
+          <Heart className="size-3 fill-current text-primary" aria-hidden />
           <span aria-hidden>·</span>
           <Link
             href="https://github.com/nextpointer/n0t3s-android"

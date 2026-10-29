@@ -44,12 +44,12 @@ export const ModeToggle = React.memo(function ModeToggle() {
       title="Toggle theme"
     >
       <Sun
-        className={`h-[1.2rem] w-[1.2rem] transition-all ${
+        className={`h-[1.2rem] w-[1.2rem] transition-colors ${
           resolvedTheme === "dark" ? "hidden" : "block"
         }`}
       />
       <Dark
-        className={`h-[1.2rem] w-[1.2rem] transition-all ${
+        className={`h-[1.2rem] w-[1.2rem] transition-colors ${
           resolvedTheme === "dark" ? "block" : "hidden"
         }`}
       />

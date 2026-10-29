@@ -29,7 +29,7 @@ interface NoteActionsProps {
  * and breathe identically.
  */
 const ACTION_BTN =
-  "rounded-lg p-2 text-foreground/60 transition-colors duration-150 ease-out motion-reduce:transition-none hover:bg-accent hover:text-foreground active:scale-[0.96] disabled:pointer-events-none";
+  "rounded-lg p-2 text-foreground/70 transition-colors duration-150 ease-out motion-reduce:transition-none hover:bg-accent hover:text-foreground active:scale-[0.96] disabled:pointer-events-none";
 
 export const NoteActions = memo(function NoteActions({ save }: NoteActionsProps) {  // zen mode state
   const [zen, setZenMode] = useAtom(zenMode);

@@ -7,6 +7,7 @@ import NoteCard from "./NoteCard";
 import { ChevronDown, Trash2, X } from "lucide-react";
 import { Skeleton } from "../ui/skeleton";
 import { Button } from "../ui/button";
+import { NOTE_ROW_HEIGHT } from "./NoteCard";
 import {
   Sheet,
   SheetContent,
@@ -42,35 +43,35 @@ function CollapsibleSection({
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
 
-  /** Row height matches the compact cards (~56px incl. gap). */
-  const ROW_HEIGHT = 56;
   const useVirt = notes.length >= 10;
 
+  // Rows are fixed-height (NOTE_ROW_HEIGHT incl. their bottom hairline), so
+  // the virtualizer's translate math matches the DOM one-for-one.
   const virtualizer = useVirtualizer({
     count: notes.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => NOTE_ROW_HEIGHT,
     overscan: 5,
     enabled: useVirt,
   });
 
   return (
-    <div className="w-full rounded-2xl border border-dashed overflow-hidden bg-card/20">
+    <div className="w-full rounded-2xl border border-dashed overflow-hidden bg-card/40">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-3 sm:px-4 py-2.5 hover:bg-accent/20 transition-colors duration-150 motion-reduce:transition-none group"
+        className="w-full flex items-center justify-between px-3 sm:px-4 py-2.5 hover:bg-accent/30 transition-colors duration-150 motion-reduce:transition-none group"
       >
         <div className="flex items-center gap-2">
-          <h2 className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70">
+          <h2 className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
             {title}
           </h2>
-          <span className="text-[9px] sm:text-[10px] text-muted-foreground/50 bg-muted/30 px-1.5 py-0.5 rounded-full font-medium min-w-[20px] text-center">
+          <span className="text-[9px] sm:text-[10px] text-muted-foreground/70 bg-muted/50 px-1.5 py-0.5 rounded-full font-medium min-w-[20px] text-center tabular-nums">
             {notes.length}
           </span>
         </div>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-muted-foreground/50 transition-transform duration-300 ease-out ${
+          className={`w-3.5 h-3.5 text-muted-foreground/70 transition-transform duration-300 ease-out ${
             isExpanded ? "rotate-180" : ""
           }`}
         />
@@ -78,7 +79,7 @@ function CollapsibleSection({
       {isExpanded && (
         <>
           {useVirt ? (
-            <div ref={parentRef} className="space-y-1 px-1.5 sm:px-2 pb-1.5 sm:pb-2 max-h-[600px] overflow-auto">
+            <div ref={parentRef} className="px-1.5 sm:px-2 pb-1.5 sm:pb-2 max-h-[600px] overflow-auto">
               <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
                 {virtualizer.getVirtualItems().map((virtualRow) => (
                   <div
@@ -104,7 +105,7 @@ function CollapsibleSection({
               </div>
             </div>
           ) : (
-            <div className="space-y-1 px-1.5 sm:px-2 pb-1.5 sm:pb-2">
+            <div className="px-1.5 sm:px-2 pb-1.5 sm:pb-2">
               {notes.map((note) => (
                 <NoteCard
                   key={note.id}
@@ -255,11 +256,11 @@ const NotesList = React.memo(function NotesList({
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-2">
-        {Array.from({ length: 6 }).map((_, idx) => (
+      <div className="flex flex-col gap-2.5 sm:gap-3">
+        {Array.from({ length: 5 }).map((_, idx) => (
           <Skeleton
             key={idx}
-            className="w-full h-14 md:h-16 rounded-2xl bg-muted/20 border border-dashed border-border/30"
+            className="w-full h-20 rounded-2xl bg-muted/30 border border-dashed border-border/40"
           />
         ))}
       </div>
@@ -311,15 +312,15 @@ const NotesList = React.memo(function NotesList({
   return (
     <div className="w-full max-w-full overflow-hidden space-y-2.5 sm:space-y-3">
       {selectMode && (
-        <div className="sticky top-0 z-20 flex items-center gap-2 rounded-2xl border border-dashed border-border/60 bg-background/90 px-2 py-1.5 backdrop-blur-sm">
+        <div className="sticky top-0 z-20 flex items-center gap-2 rounded-2xl border border-dashed border-border/60 bg-background/95 px-2 py-1.5 shadow-sm">
           <button
             type="button"
             onClick={toggleSelectAll}
-            className="rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             {allSelected ? "None" : "All"}
           </button>
-          <span className="flex-1 text-center text-xs text-muted-foreground">
+          <span className="flex-1 text-center text-xs tabular-nums text-muted-foreground">
             {selectedIds.size} selected
           </span>
           <Button
