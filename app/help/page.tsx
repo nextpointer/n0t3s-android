@@ -28,7 +28,7 @@ Every button has a tooltip — hover it to see the name and the keyboard shortcu
 
 ### Show / hide it
 
-The toolbar toggle is the small formatting-bar icon in the bottom bar (next to search). Click it to hide or bring the toolbar back. The choice is remembered.
+The formatting bar has its own switch: open Settings ⚙️ → **Global** → "Formatting bar". The choice is remembered.
 
 The same formatting also works from the keyboard:
 
@@ -59,11 +59,15 @@ Ticking an item also dims and strikes through the text so you can see what is al
 
 ### Colour and size
 
-Settings ⚙️ has two switches that change how things look:
+Settings ⚙️ is split in two — **This note** (what you are reading and editing right now) and **Global** (the whole app).
 
-**Preview colours** — on, rendered preview keeps the coloured headings, bold and italic. Off, the whole note reads monochrome. Code blocks stay syntax-highlighted either way.
+**Preview colours** (Global) — on, rendered preview keeps the coloured headings, bold and italic. Off, the whole note reads monochrome. Code blocks stay syntax-highlighted either way.
 
-**Font size** — a slider from 12px to 22px. It applies to the editor straight away, and phones get a slightly smaller size automatically so lines still fit.
+**Font size** (Global) — a slider from 12px to 22px. It applies to the editor straight away, and phones get a slightly smaller size automatically so lines still fit.
+
+**Appearance** (Global) — light, dark, or follow the system.
+
+**Read mode** (This note) — the same rendered preview you get with \`Ctrl+/\`, as a switch.
 
 ---
 
@@ -77,9 +81,15 @@ Task checkboxes stay clickable in read mode: tick one and the markdown, the word
 
 ## Tags & Pinning
 
-Add tags below the note title. Type a word, press Enter.
+Add tags below the note title. Type a word, press Enter. Matching tags appear as chips you can tap, and double-tap a chip to edit it.
 
-The \`pin\` tag is special — it locks that note to the top of your list permanently.
+The \`pin\` tag is special — it locks that note to the top of your list permanently. The quick way: open Settings ⚙️ → **This note** → "Pin to top".
+
+## Deleting
+
+Inside a note: Settings ⚙️ → **This note** → Delete note… and confirm.
+
+From the list: press and hold a note — you enter multi-select from there. Tap more notes in or out, use "All" for everything, then hit Delete and confirm. There is no trash bin, so the confirmation is the last stop.
 
 ---
 
@@ -97,9 +107,9 @@ The \`pin\` tag is special — it locks that note to the top of your list perman
 
 ## Export
 
-Open Settings ⚙️ inside any note → **Export Note** → saves as \`.md\`.
+Open Settings ⚙️ inside any note → **This note** → Export… — Markdown (\`.md\`) or JSON. PDF is coming.
 
-Auto Save lives in that same menu. Turn it off if you would rather press Save yourself.
+Auto Save lives under **Global**. Turn it off if you would rather press Save yourself.
 
 ---
 

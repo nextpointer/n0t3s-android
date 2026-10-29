@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import type { Viewport } from "next";
 import { StorageInit } from "@/components/StorageInit";
 import { AndroidBackButton } from "@/components/AndroidBackButton";
+import { ExitConfirmSheet } from "@/components/ExitConfirmSheet";
 
 export const metadata: Metadata = {
   title: "N0T3S",
@@ -31,7 +32,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#71717b",
+  // Track the system theme so the status-bar/browser chrome around the app
+  // never shows a stale grey strip (especially visible on Android).
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#101014" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -66,6 +72,7 @@ export default function RootLayout({
         >
           <StorageInit />
           <AndroidBackButton />
+          <ExitConfirmSheet />
           <main
             className={`flex h-[100dvh] w-full justify-center items-center flex-col gap-2 overflow-hidden ${sg.className} `}
           >

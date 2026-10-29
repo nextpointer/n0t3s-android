@@ -24,6 +24,7 @@
     "@tanstack/react-virtual": "^3.14.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "jotai": "^2.16.1",
     "lucide-react": "^0.534.0",
     "next": "^15.0.0",

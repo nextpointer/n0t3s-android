@@ -5,12 +5,13 @@ import { useAtom, useAtomValue } from "jotai";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   savePromptDialogOpenAtom,
   navigationTargetAtom,
@@ -43,34 +44,32 @@ export const SavePromptDialog = memo(function SavePromptDialog({ save }: SavePro
   }, [target, router, setOpen]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Unsaved Changes</DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          You have unsaved changes. Do you want to save before leaving?
-        </p>
-        <DialogFooter className="mt-4">
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Unsaved changes</SheetTitle>
+          <SheetDescription>
+            This note has changes that aren&apos;t saved yet. Save before
+            leaving?
+          </SheetDescription>
+        </SheetHeader>
+        <SheetFooter>
+          <Button size="lg" onClick={handleSave}>
+            Save and leave
+          </Button>
           <Button
             variant="outline"
+            size="lg"
+            className="text-destructive"
             onClick={handleDiscard}
-            className="shadow-none rounded-2xl"
           >
-            Discard
+            Discard changes
           </Button>
-          <Button
-            variant="secondary"
-            onClick={() => setOpen(false)}
-            className="shadow-none rounded-2xl"
-          >
-            Cancel
+          <Button variant="ghost" size="lg" onClick={() => setOpen(false)}>
+            Keep editing
           </Button>
-          <Button onClick={handleSave} className="shadow-none rounded-2xl">
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 });

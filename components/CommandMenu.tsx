@@ -4,11 +4,8 @@ import React, {
   Dispatch,
   SetStateAction,
   useEffect,
-  useLayoutEffect,
-  useState,
   useMemo,
   useCallback,
-  useRef,
 } from "react";
 import { Note } from "@/lib/types";
 import { useRouter } from "next/navigation";
@@ -20,6 +17,27 @@ import {
   zenMode,
   persistZenMode,
 } from "@/store/noteAtom";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandShortcut,
+} from "@/components/ui/command";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import {
+  EyeIcon,
+  HelpCircleIcon,
+  PlusIcon,
+  SaveIcon,
+  SettingsIcon,
+  TrashIcon,
+  DownloadIcon,
+  ContrastIcon,
+  Columns2Icon,
+} from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -36,40 +54,38 @@ interface Props {
 interface Item {
   id: string;
   label: string;
+  /** Searchable hidden text (e.g. the export format name). */
+  keywords?: string;
   shortcut: string;
   kind: "action" | "tag" | "note";
   tag?: string;
   noteId?: string;
   sub?: string;
+  icon?: React.ComponentType<{ className?: string }>;
   /** "note" = only offered while a note is open. */
   scope?: "global" | "note";
 }
 
+/**
+ * Every action the app can do, reachable from one place. The palette opens
+ * with Ctrl+P, the list-page search button or the note-page search button.
+ */
 const COMMANDS: Item[] = [
-  { id: "new", label: "New note", shortcut: "", kind: "action", scope: "global" },
-  { id: "save", label: "Save", shortcut: "⌘S", kind: "action", scope: "note" },
-  { id: "delete", label: "Delete note", shortcut: "", kind: "action", scope: "note" },
-  { id: "export", label: "Export note", shortcut: "", kind: "action", scope: "note" },
-  { id: "help", label: "Help & shortcuts", shortcut: "?", kind: "action", scope: "global" },
-  { id: "theme", label: "Toggle theme", shortcut: "", kind: "action", scope: "global" },
-  { id: "zen", label: "Toggle zen mode", shortcut: "⌘⇧Z", kind: "action", scope: "note" },
-  { id: "readmode", label: "Toggle read mode", shortcut: "⌘/", kind: "action", scope: "note" },
+  { id: "new", label: "New note", shortcut: "", kind: "action", scope: "global", icon: PlusIcon },
+  { id: "save", label: "Save note", shortcut: "⌘S", kind: "action", scope: "note", icon: SaveIcon },
+  { id: "export", label: "Export this note", shortcut: "", kind: "action", scope: "note", keywords: "download", icon: DownloadIcon },
+  { id: "delete", label: "Delete this note", shortcut: "", kind: "action", scope: "note", icon: TrashIcon },
+  { id: "readmode", label: "Read this note", shortcut: "⌘/", kind: "action", scope: "note", keywords: "preview", icon: EyeIcon },
+  { id: "zen", label: "Zen mode", shortcut: "⌘⇧Z", kind: "action", scope: "note", icon: Columns2Icon },
+  { id: "help", label: "Help and shortcuts", shortcut: "?", kind: "action", scope: "global", icon: HelpCircleIcon },
+  { id: "settings", label: "Open settings", shortcut: "", kind: "action", scope: "note", icon: SettingsIcon },
+  { id: "theme", label: "Switch theme", shortcut: "", kind: "action", scope: "global", keywords: "dark light", icon: ContrastIcon },
 ];
 
 function match(q: string, t: string): boolean {
   if (!q) return true;
-  return t.toLowerCase().includes(q.toLowerCase());
-}
-
-function sel(listEl: HTMLDivElement | null, idx: number) {
-  if (!listEl) return;
-  const prev = listEl.querySelector("[data-sel]");
-  if (prev) prev.removeAttribute("data-sel");
-  const next = listEl.querySelector(`[data-i="${idx}"]`);
-  if (next) {
-    next.setAttribute("data-sel", "true");
-    next.scrollIntoView({ block: "nearest" });
-  }
+  const needle = q.toLowerCase();
+  return t.toLowerCase().includes(needle);
 }
 
 export const CommandMenu = React.memo(function CommandMenu({
@@ -78,11 +94,7 @@ export const CommandMenu = React.memo(function CommandMenu({
   notes,
   noteId = null,
 }: Props) {
-  const [query, setQuery] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-  const idxRef = useRef(0);
-  const lenRef = useRef(0);
+  const [query, setQuery] = React.useState("");
   const router = useRouter();
   const { setTheme } = useTheme();
   const setDeleteOpen = useSetAtom(deleteDialogOpenAtom);
@@ -92,7 +104,7 @@ export const CommandMenu = React.memo(function CommandMenu({
   // Global keybind
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if (e.key === "p" && (e.ctrlKey || e.metaKey)) {
+      if (e.key === "p" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
         e.preventDefault();
         setOpen((p) => !p);
       }
@@ -100,17 +112,6 @@ export const CommandMenu = React.memo(function CommandMenu({
     document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
   }, [setOpen]);
-
-  // Focus + body lock on open
-  useEffect(() => {
-    if (open) {
-      setQuery("");
-      idxRef.current = 0;
-      document.body.style.overflow = "hidden";
-      inputRef.current?.focus();
-      return () => { document.body.style.overflow = ""; };
-    }
-  }, [open]);
 
   // Build items once
   const allItems = useMemo<Item[]>(() => {
@@ -121,7 +122,11 @@ export const CommandMenu = React.memo(function CommandMenu({
     notes.forEach((n) => (n.tags || []).forEach((t) => tagSet.add(t)));
     const tags = Array.from(tagSet).sort();
     const tagItems: Item[] = tags.map((t) => ({
-      id: `tag:${t}`, label: t, shortcut: "", kind: "tag" as const, tag: t,
+      id: `tag:${t}`,
+      label: t,
+      shortcut: "",
+      kind: "tag",
+      tag: t,
     }));
     const noteItems: Item[] = [...notes]
       .sort((a, b) => b.updatedAt - a.updatedAt)
@@ -129,40 +134,45 @@ export const CommandMenu = React.memo(function CommandMenu({
         id: `note:${n.id}`,
         label: n.title || "Untitled",
         shortcut: "",
-        kind: "note" as const,
+        kind: "note",
         noteId: n.id,
-        sub: n.content?.slice(0, 50).replace(/[#*`\n]/g, " ").trim(),
+        sub: n.content?.slice(0, 60).replace(/[#*`\n]/g, " ").trim(),
       }));
     return [...commands, ...tagItems, ...noteItems];
   }, [notes, noteId]);
 
-  // Filter
+  // Filter (shouldFilter is off — cmdk only handles selection here, so items
+  // with content-based matches such as note previews stay searchable).
   const q = query.toLowerCase();
-  const sections: { h: string; items: Item[] }[] = [];
-  const a: Item[] = [], t: Item[] = [], n: Item[] = [];
-  for (const i of allItems) {
-    if (!q || match(q, i.label) || match(q, i.tag || "") || match(q, i.sub || "")) {
-      if (i.kind === "note") n.push(i);
-      else if (i.kind === "tag") t.push(i);
-      else a.push(i);
-    }
-  }
-  if (a.length) sections.push({ h: "Commands", items: a });
-  if (t.length) sections.push({ h: "Tags", items: t });
-  if (n.length) sections.push({ h: "Notes", items: n });
+  const filtered = useMemo(
+    () =>
+      allItems.filter(
+        (i) =>
+          !q ||
+          match(q, i.label) ||
+          (i.keywords && match(q, i.keywords)) ||
+          Boolean(i.tag && match(q, i.tag)) ||
+          Boolean(i.sub && match(q, i.sub)),
+      ),
+    [allItems, q],
+  );
 
-  // Sync lenRef + highlight after render (not during)
-  useLayoutEffect(() => {
-    lenRef.current = a.length + t.length + n.length;
-    if (open) sel(listRef.current, idxRef.current);
-  });
+  const actions = filtered.filter((i) => i.kind === "action");
+  const tags = filtered.filter((i) => i.kind === "tag");
+  const noteEntries = filtered.filter((i) => i.kind === "note");
 
   // Run action
   const run = useCallback(
     (item: Item) => {
       setOpen(false);
-      if (item.kind === "note" && item.noteId) { router.push(`/note/?id=${item.noteId}`); return; }
-      if (item.kind === "tag" && item.tag) { router.push(`/?tag=${item.tag}`); return; }
+      if (item.kind === "note" && item.noteId) {
+        router.push(`/note/?id=${item.noteId}`);
+        return;
+      }
+      if (item.kind === "tag" && item.tag) {
+        router.push(`/?tag=${item.tag}`);
+        return;
+      }
       switch (item.id) {
         case "new": {
           import("@/lib/storage").then(async ({ createNote }) => {
@@ -171,116 +181,120 @@ export const CommandMenu = React.memo(function CommandMenu({
           });
           break;
         }
-        case "save": window.dispatchEvent(new CustomEvent("note:save")); break;
-        case "delete": setDeleteOpen(true); break;
-        case "export": setExportOpen(true); break;
-        case "help": router.push("/help"); break;
-        case "theme": { const d = document.documentElement.classList.contains("dark"); setTheme(d ? "light" : "dark"); break; }
-        case "zen": setZenMode((p) => { const n = !p; persistZenMode(n); return n; }); break;
-        case "readmode": window.dispatchEvent(new CustomEvent("note:readmode")); break;
+        case "save":
+          window.dispatchEvent(new CustomEvent("note:save"));
+          break;
+        case "delete":
+          setDeleteOpen(true);
+          break;
+        case "export":
+          setExportOpen(true);
+          break;
+        case "help":
+          router.push("/help");
+          break;
+        case "settings":
+          window.dispatchEvent(new CustomEvent("app:open-settings"));
+          break;
+        case "theme": {
+          // Flip between light and dark, ignoring "system" so the command
+          // always does something visible.
+          const dark = document.documentElement.classList.contains("dark");
+          setTheme(dark ? "light" : "dark");
+          break;
+        }
+        case "zen":
+          setZenMode((p) => {
+            const n = !p;
+            persistZenMode(n);
+            return n;
+          });
+          break;
+        case "readmode":
+          window.dispatchEvent(new CustomEvent("note:readmode"));
+          break;
       }
     },
     [router, setOpen, setDeleteOpen, setExportOpen, setZenMode, setTheme],
   );
 
-  // Keyboard — reads lenRef.current, never recreated
-  const onInputKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      const len = lenRef.current;
-      if (len === 0) return;
-
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        idxRef.current = (idxRef.current + 1) % len;
-        sel(listRef.current, idxRef.current);
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        idxRef.current = (idxRef.current - 1 + len) % len;
-        sel(listRef.current, idxRef.current);
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        const el = listRef.current?.querySelector(`[data-i="${idxRef.current}"]`);
-        if (el) (el as HTMLElement).click();
-      } else if (e.key === "Escape") {
-        setOpen(false);
-      }
-    },
-    [setOpen],
+  const renderItem = (item: Item) => (
+    <CommandItem key={item.id} value={item.id} onSelect={() => run(item)}>
+      {item.icon && (
+        <item.icon className="shrink-0 size-4 text-muted-foreground/60" />
+      )}
+      <span className="flex min-w-0 flex-1 items-baseline gap-2 overflow-hidden">
+        <span className="truncate">{item.label}</span>
+        {item.kind === "tag" && (
+          <span className="text-xs text-muted-foreground/40">#{item.tag}</span>
+        )}
+      </span>
+      {item.shortcut && (
+        <CommandShortcut className="hidden sm:inline">
+          {item.shortcut}
+        </CommandShortcut>
+      )}
+    </CommandItem>
   );
 
-  if (!open) return null;
-
-  let gi = -1;
+  const renderNoteItem = (item: Item) => (
+    <CommandItem
+      key={item.id}
+      value={item.id}
+      onSelect={() => run(item)}
+      className="py-2"
+    >
+      <span className="flex min-w-0 flex-col overflow-hidden">
+        <span className="truncate text-sm">{item.label}</span>
+        {item.sub && (
+          <span className="truncate text-xs text-muted-foreground/40">
+            {item.sub}
+          </span>
+        )}
+      </span>
+    </CommandItem>
+  );
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-start justify-center pt-[15vh]">
-      <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
-      <div className="relative w-full max-w-lg mx-4 bg-popover text-popover-foreground rounded-lg border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        {/* Input */}
-        <div className="flex items-center gap-3 px-4 h-10 border-b">
-          <svg className="size-4 shrink-0 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.3-4.3" />
-          </svg>
-          <input
-            ref={inputRef}
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
-            placeholder="Type a command or search..."
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); idxRef.current = 0; }}
-            onKeyDown={onInputKeyDown}
-          />
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetContent side="bottom" showCloseButton={false} className="p-0 gap-0">
+        {/* Radix demands a title/description for the announcement layer. */}
+        <SheetTitle className="sr-only">Command menu</SheetTitle>
+        <SheetDescription className="sr-only">
+          Search notes, tags and app commands
+        </SheetDescription>
+        <Command shouldFilter={false} loop className="pt-1.5 pb-2">
+          <div className="border-b px-4">
+            <CommandInput
+              value={query}
+              onValueChange={setQuery}
+              placeholder="Search notes, tags and commands…"
+              enterKeyHint="done"
+            />
+          </div>
+          <CommandList>
+            <CommandEmpty>
+              {`No matches for “${query}”`}
+            </CommandEmpty>
+            {actions.length > 0 && (
+              <CommandGroup heading="Actions">{actions.map(renderItem)}</CommandGroup>
+            )}
+            {tags.length > 0 && (
+              <CommandGroup heading="Tags">{tags.map(renderItem)}</CommandGroup>
+            )}
+            {noteEntries.length > 0 && (
+              <CommandGroup heading="Notes">
+                {noteEntries.map(renderNoteItem)}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+        <div className="border-t px-4 pt-2 text-[10px] tracking-widest text-muted-foreground/30 hidden sm:flex items-center gap-3 uppercase">
+          <span>↑↓ Navigate</span>
+          <span>↵ Select</span>
+          <span>Esc Close</span>
         </div>
-
-        {/* Results */}
-        <div ref={listRef} className="max-h-[340px] overflow-y-auto overscroll-contain py-1.5">
-          {lenRef.current === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground/50">No results</div>
-          ) : (
-            sections.map((sec) => (
-              <div key={sec.h}>
-                <div className="px-4 pt-3 pb-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/40">
-                  {sec.h}
-                </div>
-                {sec.items.map((item) => {
-                  const idx = ++gi;
-                  return (
-                    <div
-                      key={item.id}
-                      data-i={idx}
-                      className="flex items-center justify-between px-3 py-2 text-sm cursor-pointer mx-1 rounded-md data-[sel]:bg-accent data-[sel]:text-accent-foreground"
-                      onClick={() => run(item)}
-                      onMouseEnter={() => { idxRef.current = idx; sel(listRef.current, idx); }}
-                    >
-                      <span className="flex items-center gap-2 min-w-0">
-                        <span className="truncate">{item.label}</span>
-                        {item.kind === "tag" && <span className="text-muted-foreground/30 text-xs">#{item.tag}</span>}
-                        {item.kind === "note" && item.sub && (
-                          <span className="text-muted-foreground/30 text-xs truncate hidden sm:inline">{item.sub}</span>
-                        )}
-                      </span>
-                      <span className="flex items-center gap-2 shrink-0 ml-2">
-                        {item.shortcut && (
-                          <kbd className="text-[10px] text-muted-foreground/40 font-mono bg-muted/30 px-1.5 py-0.5 rounded">
-                            {item.shortcut}
-                          </kbd>
-                        )}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-2 border-t text-[10px] text-muted-foreground/30">
-          <span>↑↓</span>
-          <span>↵ select</span>
-          <span>esc</span>
-        </div>
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 });

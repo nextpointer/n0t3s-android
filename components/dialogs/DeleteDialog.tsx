@@ -5,11 +5,13 @@ import { useAtom, useAtomValue } from "jotai";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { deleteDialogOpenAtom, currentNoteAtom } from "@/store/noteAtom";
 import { deleteNote } from "@/lib/storage";
 import toast from "react-hot-toast";
@@ -33,32 +35,24 @@ export const DeleteDialog = memo(function DeleteDialog() {
   }, [note, setOpen, router]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete Note</DialogTitle>
-        </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Are you sure you want to delete this note? This action cannot be
-          undone.
-        </p>
-        <div className="flex justify-end gap-2 mt-4">
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            className="shadow-none rounded-2xl"
-          >
-            Cancel
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Delete note?</SheetTitle>
+          <SheetDescription>
+            “{note?.title || "Untitled"}” will be permanently deleted. This
+            can&apos;t be undone.
+          </SheetDescription>
+        </SheetHeader>
+        <SheetFooter>
+          <Button variant="destructive" size="lg" onClick={handleConfirm}>
+            Delete note
           </Button>
-          <Button
-            variant="destructive"
-            onClick={handleConfirm}
-            className="shadow-none rounded-2xl"
-          >
-            Delete
+          <Button variant="ghost" size="lg" onClick={() => setOpen(false)}>
+            Keep note
           </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 });

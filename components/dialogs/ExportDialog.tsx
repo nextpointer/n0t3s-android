@@ -2,21 +2,21 @@
 
 import { memo, useCallback } from "react";
 import { useAtom, useAtomValue } from "jotai";
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { exportDialogOpenAtom, currentNoteAtom } from "@/store/noteAtom";
 import toast from "react-hot-toast";
-import { FileText, FileJson, FileDown, ArrowRight } from "lucide-react";
+import { FileText, FileJson, FileDown } from "lucide-react";
 
 const EXPORT_FORMATS = [
-  { id: "pdf", label: "PDF", icon: FileDown },
-  { id: "json", label: "JSON", icon: FileJson },
-  { id: "markdown", label: "Markdown", icon: FileText },
+  { id: "pdf", label: "PDF", hint: "Coming soon", icon: FileDown, disabled: true },
+  { id: "json", label: "JSON export", hint: ".json", icon: FileJson, disabled: false },
+  { id: "markdown", label: "Markdown export", hint: ".md", icon: FileText, disabled: false },
 ] as const;
 
 export const ExportDialog = memo(function ExportDialog() {
@@ -56,30 +56,34 @@ export const ExportDialog = memo(function ExportDialog() {
   );
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-[280px] gap-4 p-5">
-        <DialogHeader className="space-y-1 pb-1">
-          <DialogTitle className="text-base font-medium text-left">
-            Export as
-          </DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Export note</SheetTitle>
+          <SheetDescription>
+            Save “{note?.title || "Untitled"}” to your device.
+          </SheetDescription>
+        </SheetHeader>
 
-        <div className="flex flex-col gap-1.5">
-          {EXPORT_FORMATS.map(({ id, label, icon: Icon }) => (
-            <Button
+        <div className="flex flex-col gap-1">
+          {EXPORT_FORMATS.map(({ id, label, hint, icon: Icon, disabled }) => (
+            <button
               key={id}
-              variant="ghost"
+              type="button"
+              disabled={disabled}
               onClick={() => handleExport(id as "pdf" | "json" | "markdown")}
-              className="group justify-start h-9 px-3 hover:bg-accent/60 rounded-md transition-all duration-200"
+              className="flex min-h-11 items-center gap-3 rounded-xl px-2 text-left transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-50"
             >
-              <Icon className="mr-2.5 h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-              <span className="text-sm font-medium">{label}</span>
-              <ArrowRight className="ml-auto hidden group-hover:inline-block text-foreground/30" />
-            </Button>
+              <Icon className="size-4 shrink-0 text-muted-foreground" />
+              <span className="flex-1 text-sm font-medium">{label}</span>
+              <span className="font-mono text-[11px] text-muted-foreground/60">
+                {hint}
+              </span>
+            </button>
           ))}
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 });
 
