@@ -41,7 +41,7 @@
 
 ```bash
 # 1️⃣ Clone the repository
-git clone https://github.com/nextpointer/n0t3s.git
+git clone https://github.com/nextpointer/n0t3s-android.git
 
 # 2️⃣ Install dependencies with Bun
 bun install
