@@ -22,6 +22,10 @@ android/app/build/
 android/.gradle/
 android/build/
 
+# agent skills (local tooling installed via bunx skills add; not app code)
+.agents/
+skills-lock.json
+
 # android release signing (never commit secrets)
 android/keystore.properties
 android/*.keystore
