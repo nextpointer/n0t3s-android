@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ renders the system splash straight from the theme attributes.
+  Match the app's dark artwork (launch icon on the brand background) instead
+  of the platform's light default.
+-->
+<resources>
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:windowSplashScreenBackground">#0E0E12</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">#0E0E12</item>
+        <item name="android:windowBackground">@drawable/splash</item>
+    </style>
+</resources>

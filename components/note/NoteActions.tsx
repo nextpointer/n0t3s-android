@@ -1,0 +1,149 @@
+"use client";
+
+import { memo, useCallback } from "react";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { Button } from "@/components/ui/button";
+import { Loader } from "@/components/ui/loader";
+import { cn } from "@/lib/utils";
+import {
+  unsavedAtom,
+  saveLoadingAtom,
+  autoSaveAtom,
+  zenMode,
+  search,
+  toolbarEnabledAtom,
+  viewModeAtom,
+  persistZenMode,
+  persistToolbarEnabled,
+} from "@/store/noteAtom";
+import { Cross } from "../icons/Cross";
+import { Zen } from "../icons/Zen";
+import { Search } from "../icons/Search";
+import { EyeIcon, ToolbarIcon } from "../icons/EditorIcons";
+
+interface NoteActionsProps {
+  save: (isAutoSave?: boolean) => void;
+}
+
+export const NoteActions = memo(function NoteActions({ save }: NoteActionsProps) {
+  // zen mode state
+  const [zen, setZenMode] = useAtom(zenMode);
+  const [toolbarEnabled, setToolbarEnabled] = useAtom(toolbarEnabledAtom);
+  const [viewMode, setViewMode] = useAtom(viewModeAtom);
+
+  const handleToggleZen = useCallback(() => {
+    const next = !zen;
+    setZenMode(next);
+    persistZenMode(next);
+  }, [zen, setZenMode]);
+
+  const previewing = viewMode === "preview";
+  const handleTogglePreview = useCallback(() => {
+    setViewMode(previewing ? "edit" : "preview");
+  }, [previewing, setViewMode]);
+
+  const handleToggleToolbar = useCallback(() => {
+    const next = !toolbarEnabled;
+    setToolbarEnabled(next);
+    persistToolbarEnabled(next);
+  }, [toolbarEnabled, setToolbarEnabled]);
+  // getter
+  const unsaved = useAtomValue(unsavedAtom);
+  const loading = useAtomValue(saveLoadingAtom);
+  const autoSave = useAtomValue(autoSaveAtom);
+
+  // setter
+  const setSearchOpen = useSetAtom(search);
+  const handleSave = useCallback(() => {
+    save(false);
+  }, [save]);
+
+  return (
+    <div className="md:relative fixed right-8 bottom-3 md:bottom-0 left-0 flex flex-row h-16 pb-1 gap-4 items-center justify-end z-30 ">
+      {!zen && (
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          aria-label="Search notes"
+          title="Search notes (Ctrl+P)"
+          className="mt-10 cursor-pointer py-0.5 p-0.5 rounded-full"
+        >
+          <Search className="size-4 pointer-events-none text-foreground/70" />
+        </button>
+      )}
+
+      <button
+        type="button"
+        onClick={handleTogglePreview}
+        aria-pressed={previewing}
+        aria-label="Toggle read mode"
+        title="Read mode (Ctrl+/)"
+        className="mt-10 cursor-pointer py-0.5 p-0.5 rounded-full"
+      >
+        <EyeIcon
+          className={cn(
+            "size-4 pointer-events-none transition-colors",
+            previewing ? "text-foreground" : "text-foreground/30",
+          )}
+        />
+      </button>
+
+      <button
+        type="button"
+        onClick={handleToggleToolbar}
+        aria-pressed={toolbarEnabled}
+        aria-label="Toggle formatting toolbar"
+        title="Toggle formatting toolbar"
+        className="mt-10 cursor-pointer py-0.5 p-0.5 rounded-full"
+      >
+        <ToolbarIcon
+          className={cn(
+            "size-4 pointer-events-none transition-colors",
+            toolbarEnabled
+              ? "text-foreground"
+              : "text-foreground/30",
+          )}
+        />
+      </button>
+
+      {zen ? (
+        <button
+          type="button"
+          onClick={handleToggleZen}
+          aria-label="Exit zen mode"
+          title="Exit zen mode (Ctrl+Shift+Z)"
+          className="mt-10 cursor-pointer py-0.5 p-0.5 rounded-full"
+        >
+          <Cross className="size-4 pointer-events-none text-foreground/70" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={handleToggleZen}
+          aria-label="Enter zen mode"
+          title="Zen mode (Ctrl+Shift+Z)"
+          className="mt-10 cursor-pointer py-0.5 p-0.5 rounded-full"
+        >
+          <Zen className="size-4 pointer-events-none" />
+        </button>
+      )}
+
+      {!zen && !autoSave && (
+        <Button
+          variant={unsaved ? "default" : "ghost"}
+          className="text-xs sm:text-sm rounded-full py-0.1 mt-10"
+          onClick={handleSave}
+          disabled={!unsaved || loading}
+        >
+          {loading ? (
+            <>
+              <Loader className="text-background mr-2" /> ...
+            </>
+          ) : (
+            "Save"
+          )}
+        </Button>
+      )}
+    </div>
+  );
+});
