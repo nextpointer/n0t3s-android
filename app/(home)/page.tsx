@@ -15,6 +15,7 @@ import NotesList from "@/components/note/NoteList";
 import { CommandMenu } from "@/components/CommandMenu";
 import { Button } from "@/components/ui/button";
 import { NewNote } from "@/components/icons/NewNote";
+import { syncWidget } from "@/lib/native";
 
 export default function Home() {
   const router = useRouter();
@@ -54,6 +55,12 @@ export default function Home() {
     const note = await createNote();
     router.push(`/note/?id=${note.id}`);
   }, [router]);
+
+  // Keep the home-screen widget in sync — fires on load and after every
+  // delete; saves while inside the editor are covered by storage.ts.
+  useEffect(() => {
+    syncWidget(notes);
+  }, [notes]);
 
   // Multi-delete in the list removes notes from the page state directly,
   // without a full reload.

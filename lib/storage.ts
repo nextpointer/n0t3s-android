@@ -4,6 +4,16 @@ import { dbGetAll, dbPut, dbDelete, dbGet } from "./db";
 // All functions are now async — non-blocking main thread
 
 /**
+ * Lists and widgets need to redraw after every mutation. Imported lazily so
+ * the (tiny) native bridge only loads on pages that actually use it, and so
+ * there is no static import cycle with `getNotes`.
+ */
+function scheduleWidgetRefresh(): void {
+  if (typeof window === "undefined") return;
+  void import("./native").then((m) => m.refreshWidgetSoon());
+}
+
+/**
  * The `notes` object store also holds app settings as `{ id, value }` records
  * (autoSave, zenMode, toolbarEnabled, …). A raw `getAll()` therefore returns
  * settings alongside real notes, which made them render in the note list as
@@ -40,10 +50,12 @@ export async function saveNotes(notes: Note[]): Promise<void> {
 
 export async function addNote(note: Note): Promise<void> {
   await dbPut(normalizeNote(note));
+  scheduleWidgetRefresh();
 }
 
 export async function updateNote(updatedNote: Note): Promise<void> {
   await dbPut(normalizeNote(updatedNote));
+  scheduleWidgetRefresh();
 }
 
 /**
@@ -88,6 +100,7 @@ export function consumeNewNoteFlag(): boolean {
 
 export async function deleteNote(id: string): Promise<void> {
   await dbDelete(id);
+  scheduleWidgetRefresh();
 }
 
 export async function getNote(id: string): Promise<Note | undefined> {

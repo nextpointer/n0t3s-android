@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Home-screen widget palette (dark). -->
+    <color name="widget_text">#F4F2F5</color>
+    <color name="widget_text_secondary">#99FFFFFF</color>
+    <color name="widget_accent">#D626FA</color>
+    <color name="widget_accent_text">#FFFFFF</color>
+</resources>

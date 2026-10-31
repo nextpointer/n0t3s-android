@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import type { Viewport } from "next";
 import { StorageInit } from "@/components/StorageInit";
 import { AndroidBackButton } from "@/components/AndroidBackButton";
+import { NativeLinks } from "@/components/NativeLinks";
 import { ExitConfirmSheet } from "@/components/ExitConfirmSheet";
 
 export const metadata: Metadata = {
@@ -72,6 +73,7 @@ export default function RootLayout({
         >
           <StorageInit />
           <AndroidBackButton />
+          <NativeLinks />
           <ExitConfirmSheet />
           <main
             className={`flex h-[100dvh] w-full justify-center items-center flex-col gap-2 overflow-hidden ${sg.className} `}

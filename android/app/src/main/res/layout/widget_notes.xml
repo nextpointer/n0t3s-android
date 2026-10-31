@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    N0T3S notes widget (4×2 default).
+
+    Brand header (paperclip + wordmark + note count), three recent-note rows
+    (each opens its note), an empty-state prompt and a "New note" pill.
+    Heights are elastic: on resize (onAppWidgetOptionsChanged) the provider
+    hides rows/footer to fit a one-line placement.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:padding="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_marginEnd="7dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_widget_clip" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.08"
+                android:text="@string/app_name"
+                android:textColor="@color/widget_text"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/widget_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Recent notes -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:divider="@null"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/widget_note_0"
+                android:visibility="gone"
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:background="@drawable/widget_row_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp">
+
+                <TextView
+                    android:id="@+id/widget_note_0_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-medium"
+                    android:maxLines="1"
+                    android:textColor="@color/widget_text"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/widget_note_0_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:fontFamily="sans-serif"
+                    android:textColor="@color/widget_text_secondary"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_note_1"
+                android:visibility="gone"
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:layout_marginTop="2dp"
+                android:background="@drawable/widget_row_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp">
+
+                <TextView
+                    android:id="@+id/widget_note_1_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-medium"
+                    android:maxLines="1"
+                    android:textColor="@color/widget_text"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/widget_note_1_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:fontFamily="sans-serif"
+                    android:textColor="@color/widget_text_secondary"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_note_2"
+                android:visibility="gone"
+                android:layout_width="match_parent"
+                android:layout_height="34dp"
+                android:layout_marginTop="2dp"
+                android:background="@drawable/widget_row_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp">
+
+                <TextView
+                    android:id="@+id/widget_note_2_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:fontFamily="sans-serif-medium"
+                    android:maxLines="1"
+                    android:textColor="@color/widget_text"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/widget_note_2_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:fontFamily="sans-serif"
+                    android:textColor="@color/widget_text_secondary"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- Shown instead of the rows when there are no notes yet. -->
+            <TextView
+                android:id="@+id/widget_empty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/widget_row_bg"
+                android:gravity="center"
+                android:paddingTop="16dp"
+                android:paddingBottom="16dp"
+                android:text="@string/widget_empty"
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+        <!-- Fills the leftover vertical space on taller placements -->
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Footer -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/widget_more"
+                android:visibility="gone"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/widget_new"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/widget_new_bg"
+                android:fontFamily="sans-serif-medium"
+                android:paddingLeft="13dp"
+                android:paddingRight="13dp"
+                android:paddingTop="7dp"
+                android:paddingBottom="7dp"
+                android:text="@string/widget_new_note"
+                android:textColor="@color/widget_accent_text"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

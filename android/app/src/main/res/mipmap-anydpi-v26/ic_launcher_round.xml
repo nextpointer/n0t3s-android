@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Brand mark: the paperclip clip art over a soft lilac tile.
+     The foreground layers are transparent PNGs; the tile is a color so the
+     launcher can mask everything (circle / squircle) without seams. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background>
-        <inset android:drawable="@mipmap/ic_launcher_background" android:inset="16.7%" />
-    </background>
-    <foreground>
-        <inset android:drawable="@mipmap/ic_launcher_foreground" android:inset="16.7%" />
-    </foreground>
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <!-- Android 13+ themed (monochrome) icon gets the clip silhouette. -->
+    <monochrome android:drawable="@mipmap/ic_launcher_foreground" />
 </adaptive-icon>

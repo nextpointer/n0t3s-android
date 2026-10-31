@@ -111,12 +111,14 @@ before it appears in the APK — the WebView serves the copied `out/` assets.
 
 ## App icons & splash
 
-Source artwork lives in [`assets/`](./assets/) (`icon.png` 1024×1024 on a
-transparent background, `splash.png` 2732×2732). After editing them, regenerate
-the platform resources:
+Source artwork lives in [`assets/`](./assets/) (`icon.png` 1024×1024 paperclip
+mark on a soft lilac tile, `splash.png` 2732×2732 dark with the same mark).
+The launcher/adaptive/mipmap icons and the notification/widget art are kept in
+sync from `public/android-chrome-512x512.png`. After editing the source art,
+regenerate the platform resources:
 
 ```bash
-bunx capacitor-assets generate --android --iconBackgroundColor '#0E0E12' --splashBackgroundColor '#0E0E12'
+bunx capacitor-assets generate --android --iconBackgroundColor '#FAF3FE' --splashBackgroundColor '#101014'
 python3 scripts/fix_legacy_icons.py   # legacy (pre-Android-8) launcher icons: white → dark bg
 ```
 

@@ -16,6 +16,9 @@ import {
   pageLoadingAtom,
   allTagsAtom,
   tagsAtom,
+  unsavedAtom,
+  autoSaveAtom,
+  titleAtom,
   initializeNoteAtom,
   checkUnsavedAtom,
   zenMode,
@@ -24,6 +27,8 @@ import {
 import { getNotes } from "@/lib/storage";
 import { useNoteOperations } from "@/hooks/useNoteOperations";
 import { Note } from "@/lib/types";
+import { IS_NATIVE_ANDROID, cancelNotification, showNotification, UNSAVED_REMINDER_ID } from "@/lib/native";
+import { App as CapacitorApp } from "@capacitor/app";
 import { ExportDialog } from "@/components/dialogs/ExportDialog";
 import { UseAIShortcuts } from "@/hooks/useAIshortcuts";
 import { CommandMenu } from "@/components/CommandMenu";
@@ -71,6 +76,7 @@ function NotePage() {
   const tags = useAtomValue(tagsAtom);
 
   // setters
+  // setters
   const setPageLoading = useSetAtom(pageLoadingAtom);
   const setAllTags = useSetAtom(allTagsAtom);
   const setTags = useSetAtom(tagsAtom);
@@ -80,6 +86,36 @@ function NotePage() {
   // Initialize auto-save functionality
   const { save } = useNoteOperations();
   UseAIShortcuts();
+
+  // On native, leaving the app with unsaved work posts a reminder so the
+  // edits can't be lost to process death; saving (or reopening) clears it.
+  const unsaved = useAtomValue(unsavedAtom);
+  const [autoSave] = useAtom(autoSaveAtom);
+  const noteTitle = useAtomValue(titleAtom);
+  useEffect(() => {
+    if (!IS_NATIVE_ANDROID || !unsaved || autoSave) return;
+    let cancelled = false;
+    let removeListener: (() => void) | undefined;
+    CapacitorApp.addListener("appStateChange", (state) => {
+      if (state.isActive) {
+        cancelNotification(UNSAVED_REMINDER_ID);
+      } else {
+        showNotification({
+          id: UNSAVED_REMINDER_ID,
+          title: `Unsaved changes: "${noteTitle || "Untitled"}"`,
+          body: "Reopen N0T3S to keep your note.",
+        });
+      }
+    }).then((handle) => {
+      if (cancelled) void handle.remove();
+      else removeListener = () => void handle.remove();
+    });
+    return () => {
+      cancelled = true;
+      removeListener?.();
+      cancelNotification(UNSAVED_REMINDER_ID);
+    };
+  }, [unsaved, autoSave, noteTitle]);
 
   // The command palette and the keyboard-toolbar Save button both trigger
   // saves through this event — those components don't receive `save` as a

@@ -4,4 +4,10 @@
     <string name="title_activity_main">N0T3S</string>
     <string name="package_name">io.github.nextpointer.n0t3s</string>
     <string name="custom_url_scheme">io.github.nextpointer.n0t3s</string>
+
+    <string name="channel_notes_name">Notes</string>
+    <string name="channel_notes_description">Reminders about your notes</string>
+    <string name="widget_description">Recent notes with a new-note shortcut</string>
+    <string name="widget_new_note">New note</string>
+    <string name="widget_empty">No notes yet\nTap to start writing</string>
 </resources>
