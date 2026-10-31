@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { Note } from "@/lib/types";
 import { Check, Pin } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { notePreview, relativeTime } from "@/lib/text";
 
 type Props = {
   note: Note;
@@ -13,27 +14,15 @@ type Props = {
   selected?: boolean;
   onSelectToggle?: (id: string) => void;
   onLongPress?: (id: string) => void;
+  /** Every row draws an inset hairline up to (but not including) the last. */
+  isLast?: boolean;
 };
 
 /** How long a press must be held before it becomes a selection. */
 const LONG_PRESS_MS = 450;
 
 /** Row height is FIXED so the virtualizer's math and the DOM agree. */
-export const NOTE_ROW_HEIGHT = 64;
-
-function relativeTime(ts: number): string {
-  const minutes = Math.floor((Date.now() - ts) / 60000);
-  if (minutes < 1) return "now";
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
-  return new Date(ts).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-}
+export const NOTE_ROW_HEIGHT = 76;
 
 const NoteCard = ({
   note,
@@ -42,9 +31,11 @@ const NoteCard = ({
   selected = false,
   onSelectToggle,
   onLongPress,
+  isLast = false,
 }: Props) => {
   const isPinned = note.tags?.includes("pin");
   const otherTags = note.tags?.filter((t) => t !== "pin") ?? [];
+  const preview = notePreview(note.content);
 
   const pressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // Set when the hold fires; the click that follows the lift is swallowed so
@@ -103,11 +94,13 @@ const NoteCard = ({
       tabIndex={0}
       style={{ height: NOTE_ROW_HEIGHT }}
       className={cn(
-        "group relative flex w-full cursor-pointer select-none items-center gap-3 px-3 sm:px-4",
-        "border-b border-border/40",
+        // System typography (SF/Roboto/Segoe) with careful tracking; the
+        // rest of the app keeps the Space Grotesk brand voice.
+        "font-native group relative flex w-full cursor-pointer select-none items-center",
+        "px-3.5 sm:px-4",
         "transition-colors duration-150 ease-out motion-reduce:transition-none",
-        "hover:bg-accent/50 active:bg-accent",
-        "focus-visible:outline-none focus-visible:bg-accent/60",
+        "hover:bg-muted/70 active:bg-muted",
+        "focus-visible:outline-none focus-visible:bg-muted/70",
         selected && "bg-primary/10 hover:bg-primary/15",
       )}
     >
@@ -119,37 +112,57 @@ const NoteCard = ({
             "flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
             selected
               ? "border-primary bg-primary text-primary-foreground"
-              : "border-foreground/30",
+              : "border-foreground/25",
           )}
         >
           {selected && <Check className="size-3" strokeWidth={3} />}
         </span>
       )}
 
-      <div className="min-w-0 flex-1 overflow-hidden">
-        <h3 className="truncate text-[15px] font-medium leading-tight text-foreground">
+      {/* Title + first line of the note body, iOS-two-line style */}
+      <div className="min-w-0 flex-1 overflow-hidden pr-2">
+        <h3
+          className={cn(
+            "truncate text-[15px] font-semibold leading-[1.25] tracking-[-0.012em] text-foreground",
+            note.title || "text-muted-foreground",
+          )}
+        >
           {note.title || "Untitled"}
         </h3>
-        <p className="mt-1 flex items-center gap-1.5 truncate text-[13px] leading-tight text-muted-foreground/60">
-          <time dateTime={new Date(note.updatedAt).toISOString()}>
-            {relativeTime(note.updatedAt)}
-          </time>
+        <p className="mt-[3px] flex items-center gap-1.5 truncate text-[12.5px] leading-[1.35] text-muted-foreground/75">
+          {preview && <span className="truncate">{preview}</span>}
+          {preview && otherTags.length > 0 && <span aria-hidden>·</span>}
           {otherTags.length > 0 && (
-            <>
-              <span aria-hidden>·</span>
-              <span className="truncate">
-                {otherTags.map((t) => `#${t}`).join(" ")}
-              </span>
-            </>
+            <span className="shrink-0 truncate text-primary/60">
+              {otherTags.map((t) => `#${t}`).join("  ")}
+            </span>
           )}
         </p>
       </div>
 
-      {isPinned && (
-        <Pin
-          aria-label="Pinned"
-          className="size-3.5 shrink-0 rotate-45 text-primary"
-          fill="currentColor"
+      {/* Trailing date + pin column, like the iOS list rows */}
+      <div className="flex shrink-0 flex-col items-end justify-center gap-[5px] self-stretch py-2">
+        <time
+          dateTime={new Date(note.updatedAt).toISOString()}
+          className="whitespace-nowrap text-[11px] font-medium tabular-nums leading-none text-muted-foreground/55"
+        >
+          {relativeTime(note.updatedAt)}
+        </time>
+        {isPinned && (
+          <Pin
+            aria-label="Pinned"
+            className="size-3.5 rotate-45 text-primary/90"
+            fill="currentColor"
+            strokeWidth={0}
+          />
+        )}
+      </div>
+
+      {/* Inset hairline, aligned with the row's text column */}
+      {!isLast && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-3.5 bottom-0 h-px bg-border sm:inset-x-4"
         />
       )}
     </div>

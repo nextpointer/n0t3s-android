@@ -167,6 +167,13 @@
 }
 
 @theme inline {
+    /* System list typography: SF on iOS, Roboto on Android, Segoe on Windows.
+       The app keeps Space Grotesk for brand surfaces; list rows read like the
+       OS shipped them. */
+    --font-native:
+        -apple-system, "SF Pro Text", system-ui, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --color-card: var(--card);

@@ -55,31 +55,48 @@ function CollapsibleSection({
     enabled: useVirt,
   });
 
+  const renderRow = (index: number) => (
+    <NoteCard
+      note={notes[index]}
+      onClick={() => onNoteClick(notes[index].id)}
+      selectMode={selectMode}
+      selected={selectedIds.has(notes[index].id)}
+      onSelectToggle={onNoteToggle}
+      onLongPress={onNoteLongPress}
+      isLast={index === notes.length - 1}
+    />
+  );
+
   return (
-    <div className="w-full rounded-2xl border border-dashed overflow-hidden bg-card/40">
+    <div className="w-full">
+      {/* Section header — an iOS-style uppercase eyebrow above the card */}
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-3 sm:px-4 py-2.5 hover:bg-accent/30 transition-colors duration-150 motion-reduce:transition-none group"
+        className="group flex w-full cursor-pointer items-center justify-between rounded-lg px-1.5 py-2 transition-colors hover:bg-muted/40 motion-reduce:transition-none"
+        aria-expanded={isExpanded}
       >
-        <div className="flex items-center gap-2">
-          <h2 className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+        <span className="flex items-center gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
             {title}
-          </h2>
-          <span className="text-[9px] sm:text-[10px] text-muted-foreground/70 bg-muted/50 px-1.5 py-0.5 rounded-full font-medium min-w-[20px] text-center tabular-nums">
+          </span>
+          <span className="text-[11px] font-medium tabular-nums text-muted-foreground/55">
             {notes.length}
           </span>
-        </div>
+        </span>
         <ChevronDown
-          className={`w-3.5 h-3.5 text-muted-foreground/70 transition-transform duration-300 ease-out ${
-            isExpanded ? "rotate-180" : ""
+          className={`size-3.5 text-muted-foreground/50 transition-transform duration-300 ease-out motion-reduce:transition-none ${
+            isExpanded ? "" : "-rotate-90"
           }`}
         />
       </button>
+
       {isExpanded && (
-        <>
+        /* The card itself: one soft surface the rows sit on, hairline-inset
+           dividers handled inside NoteCard rows. */
+        <div className="overflow-hidden rounded-xl border border-border/50 bg-card shadow-xs">
           {useVirt ? (
-            <div ref={parentRef} className="px-1.5 sm:px-2 pb-1.5 sm:pb-2 max-h-[600px] overflow-auto">
+            <div ref={parentRef} className="max-h-[600px] overflow-y-auto overscroll-contain">
               <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
                 {virtualizer.getVirtualItems().map((virtualRow) => (
                   <div
@@ -92,34 +109,19 @@ function CollapsibleSection({
                       transform: `translateY(${virtualRow.start}px)`,
                     }}
                   >
-                    <NoteCard
-                      note={notes[virtualRow.index]}
-                      onClick={() => onNoteClick(notes[virtualRow.index].id)}
-                      selectMode={selectMode}
-                      selected={selectedIds.has(notes[virtualRow.index].id)}
-                      onSelectToggle={onNoteToggle}
-                      onLongPress={onNoteLongPress}
-                    />
+                    {renderRow(virtualRow.index)}
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="px-1.5 sm:px-2 pb-1.5 sm:pb-2">
-              {notes.map((note) => (
-                <NoteCard
-                  key={note.id}
-                  note={note}
-                  onClick={() => onNoteClick(note.id)}
-                  selectMode={selectMode}
-                  selected={selectedIds.has(note.id)}
-                  onSelectToggle={onNoteToggle}
-                  onLongPress={onNoteLongPress}
-                />
+            <div>
+              {notes.map((note, index) => (
+                <div key={note.id}>{renderRow(index)}</div>
               ))}
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
@@ -256,12 +258,20 @@ const NotesList = React.memo(function NotesList({
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-2.5 sm:gap-3">
-        {Array.from({ length: 5 }).map((_, idx) => (
-          <Skeleton
-            key={idx}
-            className="w-full h-20 rounded-2xl bg-muted/30 border border-dashed border-border/40"
-          />
+      <div className="flex flex-col gap-4">
+        {Array.from({ length: 2 }).map((_, group) => (
+          <div key={group} className="flex flex-col gap-1">
+            <div className="h-6 w-32 rounded-lg bg-muted/40" />
+            <div className="overflow-hidden rounded-xl border border-border/50 bg-card/60">
+              {Array.from({ length: group === 0 ? 3 : 2 }).map((__, idx) => (
+                <Skeleton
+                  key={idx}
+                  style={{ height: NOTE_ROW_HEIGHT }}
+                  className="w-full rounded-none bg-muted/30"
+                />
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     );
@@ -310,17 +320,17 @@ const NotesList = React.memo(function NotesList({
   const untaggedNotes = sortedNotes.filter((note) => !note.tags?.length);
 
   return (
-    <div className="w-full max-w-full overflow-hidden space-y-2.5 sm:space-y-3">
+    <div className="w-full max-w-full overflow-hidden space-y-4">
       {selectMode && (
-        <div className="sticky top-0 z-20 flex items-center gap-2 rounded-2xl border border-dashed border-border/60 bg-background/95 px-2 py-1.5 shadow-sm">
+        <div className="sticky top-0 z-20 flex items-center gap-2 rounded-full border border-border/60 bg-background/85 px-2.5 py-1.5 shadow-xs backdrop-blur-md">
           <button
             type="button"
             onClick={toggleSelectAll}
-            className="cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="cursor-pointer rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             {allSelected ? "None" : "All"}
           </button>
-          <span className="flex-1 text-center text-xs tabular-nums text-muted-foreground">
+          <span className="flex-1 text-center text-xs font-medium tabular-nums tracking-[-0.01em] text-foreground/80">
             {selectedIds.size} selected
           </span>
           <Button
