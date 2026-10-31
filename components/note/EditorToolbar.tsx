@@ -15,7 +15,9 @@ import {
 import {
   BoldIcon,
   BulletListIcon,
+  CodeBlockIcon,
   CodeIcon,
+  DividerIcon,
   EyeIcon,
   ItalicIcon,
   LinkIcon,
@@ -23,17 +25,25 @@ import {
   PencilIcon,
   PlainTextIcon,
   QuoteIcon,
+  StrikethroughIcon,
   TaskListIcon,
 } from "@/components/icons/EditorIcons";
 import { Cross } from "@/components/icons/Cross";
-import { Zen } from "@/components/icons/Zen";import { cn } from "@/lib/utils";
+import { Zen } from "@/components/icons/Zen";
+import { Undo2, Redo2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   autoSaveAtom,
   saveLoadingAtom,
   unsavedAtom,
   zenMode,
   persistZenMode,
+  canUndoAtom,
+  canRedoAtom,
+  undoAtom,
+  redoAtom,
 } from "@/store/noteAtom";
+import { markdownActions as ma } from "overtype";
 
 /** Minimal shape of the OverType instance this toolbar drives. */
 export interface ToolbarEditor {
@@ -45,7 +55,7 @@ export type ViewMode = "edit" | "plain" | "preview";
 
 const VIEW_MODES: Record<
   ViewMode,
-  { label: string; Icon: (props: { className?: string }) => React.ReactElement }
+  { label: string; Icon: (props: { className?: string }) => React.ReactNode }
 > = {
   edit: { label: "Edit", Icon: PencilIcon },
   plain: { label: "Raw", Icon: PlainTextIcon },
@@ -55,23 +65,46 @@ const VIEW_MODES: Record<
 interface ToolbarButtonSpec {
   name: string;
   label: string;
-  Icon: (props: { className?: string }) => React.ReactElement;
+  Icon: (props: { className?: string }) => React.ReactNode;
   /** OverType action id from `defaultToolbarButtons` (drives shortcuts too) */
-  actionId: string;
+  actionId?: string;
   /** Key in the `markdownActions.getActiveFormats()` result */
   format?: string;
+  /** Custom insertion for actions OverType has no built-in id for. */
+  apply?: (textarea: HTMLTextAreaElement) => void;
+  /** Disabled unless the history atom allows it (undo / redo). */
+  gated?: "undo" | "redo";
 }
+
+const strikethrough = (textarea: HTMLTextAreaElement) =>
+  ma.applyCustomFormat(textarea, { prefix: "~~", suffix: "~~", trimFirst: true });
+
+const codeBlock = (textarea: HTMLTextAreaElement) =>
+  ma.applyCustomFormat(textarea, {
+    prefix: "```\n",
+    suffix: "\n```",
+    surroundWithNewlines: true,
+  });
+
+const horizontalRule = (textarea: HTMLTextAreaElement) =>
+  ma.applyCustomFormat(textarea, {
+    prefix: "---",
+    surroundWithNewlines: true,
+    prefixSpace: true,
+  });
 
 const GROUPS: ToolbarButtonSpec[][] = [
   [
-    { name: "bold", label: "Bold (Ctrl+B)", Icon: BoldIcon, actionId: "toggleBold", format: "bold" },
-    { name: "italic", label: "Italic (Ctrl+I)", Icon: ItalicIcon, actionId: "toggleItalic", format: "italic" },
-    { name: "code", label: "Inline code", Icon: CodeIcon, actionId: "toggleCode" },
+    { name: "undo", label: "Undo", Icon: Undo2, gated: "undo" },
+    { name: "redo", label: "Redo", Icon: Redo2, gated: "redo" },
   ],
   [
     { name: "h1", label: "Heading 1", Icon: () => <span className="text-[13px] leading-none font-semibold">H1</span>, actionId: "toggleH1", format: "header" },
     { name: "h2", label: "Heading 2", Icon: () => <span className="text-[13px] leading-none font-semibold">H2</span>, actionId: "toggleH2", format: "header-2" },
     { name: "h3", label: "Heading 3", Icon: () => <span className="text-[13px] leading-none font-semibold">H3</span>, actionId: "toggleH3", format: "header-3" },
+    { name: "bold", label: "Bold (Ctrl+B)", Icon: BoldIcon, actionId: "toggleBold", format: "bold" },
+    { name: "italic", label: "Italic (Ctrl+I)", Icon: ItalicIcon, actionId: "toggleItalic", format: "italic" },
+    { name: "strike", label: "Strikethrough", Icon: StrikethroughIcon, apply: strikethrough, format: "strike" },
   ],
   [
     { name: "bulletList", label: "Bullet list", Icon: BulletListIcon, actionId: "toggleBulletList", format: "bullet-list" },
@@ -79,7 +112,12 @@ const GROUPS: ToolbarButtonSpec[][] = [
     { name: "taskList", label: "Task list", Icon: TaskListIcon, actionId: "toggleTaskList", format: "task-list" },
     { name: "quote", label: "Quote", Icon: QuoteIcon, actionId: "toggleQuote", format: "quote" },
   ],
-  [{ name: "link", label: "Insert link (Ctrl+K)", Icon: LinkIcon, actionId: "insertLink" }],
+  [
+    { name: "code", label: "Inline code", Icon: CodeIcon, actionId: "toggleCode" },
+    { name: "codeBlock", label: "Code block", Icon: CodeBlockIcon, apply: codeBlock },
+    { name: "hr", label: "Divider", Icon: DividerIcon, apply: horizontalRule },
+    { name: "link", label: "Insert link (Ctrl+K)", Icon: LinkIcon, actionId: "insertLink" },
+  ],
 ];
 
 interface EditorToolbarProps {
@@ -108,6 +146,10 @@ export const EditorToolbar = memo(function EditorToolbar({
   const autoSave = useAtomValue(autoSaveAtom);
   const unsaved = useAtomValue(unsavedAtom);
   const loading = useAtomValue(saveLoadingAtom);
+  const canUndo = useAtomValue(canUndoAtom);
+  const canRedo = useAtomValue(canRedoAtom);
+  const undo = useSetAtom(undoAtom);
+  const redo = useSetAtom(redoAtom);
   const setZenMode = useSetAtom(zenMode);
 
   const refreshActiveFormats = useCallback(() => {
@@ -148,12 +190,25 @@ export const EditorToolbar = memo(function EditorToolbar({
   }, [viewMode, refreshActiveFormats]);
 
   const run = useCallback(
-    (actionId: string) => {
+    (spec: ToolbarButtonSpec) => {
       if (!editor) return;
-      // performAction() focuses the textarea for us, which keeps the caret.
-      void editor.performAction(actionId).then(refreshActiveFormats);
+      if (spec.gated === "undo") {
+        undo();
+        return;
+      }
+      if (spec.gated === "redo") {
+        redo();
+        return;
+      }
+      if (spec.actionId) {
+        // performAction() focuses the textarea for us, which keeps the caret.
+        void editor.performAction(spec.actionId).then(refreshActiveFormats);
+      } else if (spec.apply) {
+        spec.apply(editor.textarea);
+        refreshActiveFormats();
+      }
     },
-    [editor, refreshActiveFormats],
+    [editor, refreshActiveFormats, undo, redo],
   );
 
   const switchView = useCallback(
@@ -199,6 +254,9 @@ export const EditorToolbar = memo(function EditorToolbar({
             )}
             {group.map((spec) => {
               const isActive = spec.format ? activeFormats.includes(spec.format) : false;
+              const gatedOff =
+                (spec.gated === "undo" && !canUndo) ||
+                (spec.gated === "redo" && !canRedo);
               return (
                 <Button
                   key={spec.name}
@@ -209,11 +267,11 @@ export const EditorToolbar = memo(function EditorToolbar({
                   aria-label={spec.label}
                   aria-pressed={spec.format ? isActive : undefined}
                   data-active={isActive || undefined}
-                  disabled={!editor}
+                  disabled={!editor || gatedOff}
                   // Keep the caret: without this the textarea blurs and the
                   // selection that markdown-actions reads is lost.
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => run(spec.actionId)}
+                  onClick={() => run(spec)}
                   className={cn(
                     "size-8 rounded-md text-muted-foreground transition-colors duration-150 ease-out motion-reduce:transition-none",
                     "hover:bg-accent hover:text-accent-foreground",

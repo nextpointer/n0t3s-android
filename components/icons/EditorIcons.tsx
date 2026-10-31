@@ -127,6 +127,37 @@ export function PlainTextIcon(props: IconProps) {
   );
 }
 
+export function StrikethroughIcon(props: IconProps) {
+  return (
+    <svg {...frame(props)}>
+      <path d="M4 12h16" />
+      <path d="M16.25 5.75c-.9-1-2.4-1.5-4.25-1.5-2.6 0-4.4 1.15-4.4 3.1 0 1.3.75 2.2 2.15 2.85" />
+      <path d="M7.75 18.25c.9.95 2.4 1.5 4.35 1.5 2.65 0 4.55-1.15 4.55-3.1 0-1-.45-1.8-1.35-2.4" />
+    </svg>
+  );
+}
+
+/** Curly-brace code block — distinct from inline `</>` code. */
+export function CodeBlockIcon(props: IconProps) {
+  return (
+    <svg {...frame(props)}>
+      <path d="M8.5 4.5c-1.5 0-1.5 1.4-1.5 2.6 0 1.5-.6 2.4-2 2.9v4c1.4.5 2 1.4 2 2.9 0 1.2 0 2.6 1.5 2.6" />
+      <path d="M15.5 4.5c1.5 0 1.5 1.4 1.5 2.6 0 1.5.6 2.4 2 2.9v4c-1.4.5-2 1.4-2 2.9 0 1.2 0 2.6-1.5 2.6" />
+    </svg>
+  );
+}
+
+/** Horizontal rule — a line between two full-width dashes. */
+export function DividerIcon(props: IconProps) {
+  return (
+    <svg {...frame(props)}>
+      <path d="M4 8.75h6M14 8.75h6M8 15.25h8" />
+      <path d="M4 15.25h1.6" />
+      <path d="M18.4 15.25H20" />
+    </svg>
+  );
+}
+
 /** A formatting bar — used for the toolbar visibility toggle. */
 export function ToolbarIcon(props: IconProps) {
   return (

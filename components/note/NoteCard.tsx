@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Note } from "@/lib/types";
 import { Check, Pin } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,8 @@ type Props = {
   selected?: boolean;
   onSelectToggle?: (id: string) => void;
   onLongPress?: (id: string) => void;
+  /** Open every note tagged with the clicked inline `#tag`. */
+  onTagClick?: (tag: string) => void;
   /** Every row draws an inset hairline up to (but not including) the last. */
   isLast?: boolean;
 };
@@ -22,7 +24,10 @@ type Props = {
 const LONG_PRESS_MS = 450;
 
 /** Row height is FIXED so the virtualizer's math and the DOM agree. */
-export const NOTE_ROW_HEIGHT = 76;
+export const NOTE_ROW_HEIGHT = 84;
+
+/** Inline `#tag` tokens inside the preview text. */
+const PREVIEW_TAG_SPLIT = /(#[A-Za-z][A-Za-z0-9_-]{0,31})/g;
 
 const NoteCard = ({
   note,
@@ -31,10 +36,10 @@ const NoteCard = ({
   selected = false,
   onSelectToggle,
   onLongPress,
+  onTagClick,
   isLast = false,
 }: Props) => {
   const isPinned = note.tags?.includes("pin");
-  const otherTags = note.tags?.filter((t) => t !== "pin") ?? [];
   const preview = notePreview(note.content);
 
   const pressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -75,6 +80,14 @@ const NoteCard = ({
     onClick();
   };
 
+  // The preview paragraph is split so every `#word` inside it becomes a
+  // tappable chip — the Obsidian-style tag is part of the sentence, not a
+  // separate metadata row.
+  const previewParts = useMemo(
+    () => preview.split(PREVIEW_TAG_SPLIT),
+    [preview],
+  );
+
   return (
     <div
       onPointerDown={handlePointerDown}
@@ -96,8 +109,8 @@ const NoteCard = ({
       className={cn(
         // System typography (SF/Roboto/Segoe) with careful tracking; the
         // rest of the app keeps the Space Grotesk brand voice.
-        "font-native group relative flex w-full cursor-pointer select-none items-center",
-        "px-3.5 sm:px-4",
+        "font-native group relative flex w-full cursor-pointer select-none items-stretch",
+        "px-4 sm:px-5",
         "transition-colors duration-150 ease-out motion-reduce:transition-none",
         "hover:bg-muted/70 active:bg-muted",
         "focus-visible:outline-none focus-visible:bg-muted/70",
@@ -106,42 +119,63 @@ const NoteCard = ({
     >
       {/* Selection indicator — only while picking notes to delete */}
       {selectMode && (
-        <span
-          aria-hidden
-          className={cn(
-            "flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
-            selected
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-foreground/25",
-          )}
-        >
-          {selected && <Check className="size-3" strokeWidth={3} />}
+        <span className="flex shrink-0 items-center pr-3">
+          <span
+            aria-hidden
+            className={cn(
+              "flex size-5 items-center justify-center rounded-full border transition-colors",
+              selected
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-foreground/25",
+            )}
+          >
+            {selected && <Check className="size-3" strokeWidth={3} />}
+          </span>
         </span>
       )}
 
-      {/* Title + first line of the note body, iOS-two-line style */}
-      <div className="min-w-0 flex-1 overflow-hidden pr-2">
+      {/* Title + two lines of the body (tags inline), iOS-napkin style */}
+      <div className="flex min-w-0 flex-1 flex-col justify-center overflow-hidden">
         <h3
           className={cn(
-            "truncate text-[15px] font-semibold leading-[1.25] tracking-[-0.012em] text-foreground",
+            "truncate text-[17px] font-semibold leading-[1.2] tracking-[-0.015em] text-foreground",
             note.title || "text-muted-foreground",
           )}
         >
           {note.title || "Untitled"}
         </h3>
-        <p className="mt-[3px] flex items-center gap-1.5 truncate text-[12.5px] leading-[1.35] text-muted-foreground/75">
-          {preview && <span className="truncate">{preview}</span>}
-          {preview && otherTags.length > 0 && <span aria-hidden>·</span>}
-          {otherTags.length > 0 && (
-            <span className="shrink-0 truncate text-primary/60">
-              {otherTags.map((t) => `#${t}`).join("  ")}
-            </span>
-          )}
-        </p>
+        {preview && (
+          <p className="mt-[5px] line-clamp-2 text-[13.5px] leading-[1.35] tracking-[-0.01em] text-muted-foreground/85">
+            {previewParts.map((part, i) => {
+              const isTag = i % 2 === 1 && part.startsWith("#");
+              if (!isTag) return <span key={i}>{part}</span>;
+              return (
+                <span
+                  // The chip is a live region inside a semantic button row:
+                  // keep the row's keyboard semantics, tap is mouse-only.
+                  key={i}
+                  role="link"
+                  tabIndex={-1}
+                  onClick={(e) => {
+                    // The row opens the note; the chip filters by the tag.
+                    e.stopPropagation();
+                    if (!selectMode) {
+                      longFired.current = false;
+                      onTagClick?.(part.slice(1));
+                    }
+                  }}
+                  className="text-primary/80 underline-offset-2 hover:underline"
+                >
+                  {part}
+                </span>
+              );
+            })}
+          </p>
+        )}
       </div>
 
       {/* Trailing date + pin column, like the iOS list rows */}
-      <div className="flex shrink-0 flex-col items-end justify-center gap-[5px] self-stretch py-2">
+      <div className="flex shrink-0 flex-col items-end justify-center gap-[5px] self-stretch py-2 pl-3">
         <time
           dateTime={new Date(note.updatedAt).toISOString()}
           className="whitespace-nowrap text-[11px] font-medium tabular-nums leading-none text-muted-foreground/55"
@@ -162,7 +196,7 @@ const NoteCard = ({
       {!isLast && (
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-x-3.5 bottom-0 h-px bg-border sm:inset-x-4"
+          className="pointer-events-none absolute inset-x-4 bottom-0 h-px bg-border sm:inset-x-5"
         />
       )}
     </div>

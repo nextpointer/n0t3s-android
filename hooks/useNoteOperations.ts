@@ -11,6 +11,7 @@ import {
 } from "@/store/noteAtom";
 import { updateNote } from "@/lib/storage";
 import toast from "react-hot-toast";
+import { extractTags } from "@/lib/tags";
 
 export function useNoteOperations() {
   const [note, setNote] = useAtom(currentNoteAtom);
@@ -18,6 +19,7 @@ export function useNoteOperations() {
   const title = useAtomValue(titleAtom);
   const content = useAtomValue(contentAtom);
   const tags = useAtomValue(tagsAtom);
+  const setTags = useSetAtom(tagsAtom);
 
   const [unsaved, setUnsaved] = useAtom(unsavedAtom);
   const autoSave = useAtomValue(autoSaveAtom);
@@ -36,16 +38,24 @@ export function useNoteOperations() {
 
       setSaveLoading(true);
       try {
+        // Tags live inline in the content (Obsidian style) — whatever the
+        // atoms hold is derived on save from the body itself. The "pin"
+        // marker survives even though it is not a hash tag in the text.
+        const mergedTags = Array.from(
+          new Set([...extractTags(content), ...tags]),
+        ).filter((t) => t === "pin" || t.length <= 32);
+
         const updated = {
           ...note,
           title,
           content,
-          tags,
+          tags: mergedTags,
           updatedAt: Date.now(),
         };
 
         await updateNote(updated);
         setNote(updated);
+        setTags(mergedTags);
         setUnsaved(false);
 
         if (!isAutoSave) {
@@ -57,7 +67,7 @@ export function useNoteOperations() {
         setSaveLoading(false);
       }
     },
-    [note, title, content, tags, setNote, setSaveLoading, setUnsaved],
+    [note, title, content, tags, setNote, setTags, setSaveLoading, setUnsaved],
   );
 
   // Auto-save effect

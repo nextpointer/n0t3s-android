@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSetAtom, useAtomValue, useAtom } from "jotai";
 import { Loader } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
-import { TagInput } from "@/components/TagInput";
 import { NoteHeader } from "@/components/note/NoteHeader";
 import { NoteTitle } from "@/components/note/NoteTitle";
 import { NoteContent } from "@/components/note/NoteContent";
@@ -15,12 +14,10 @@ import { SavePromptDialog } from "@/components/dialogs/SavePromptDialog";
 import {
   pageLoadingAtom,
   allTagsAtom,
-  tagsAtom,
   unsavedAtom,
   autoSaveAtom,
   titleAtom,
   initializeNoteAtom,
-  checkUnsavedAtom,
   zenMode,
   search,
 } from "@/store/noteAtom";
@@ -72,16 +69,11 @@ function NotePage() {
 
   // Read-only atoms
   const pageLoading = useAtomValue(pageLoadingAtom);
-  const allTags = useAtomValue(allTagsAtom);
-  const tags = useAtomValue(tagsAtom);
 
-  // setters
   // setters
   const setPageLoading = useSetAtom(pageLoadingAtom);
   const setAllTags = useSetAtom(allTagsAtom);
-  const setTags = useSetAtom(tagsAtom);
   const initializeNote = useSetAtom(initializeNoteAtom);
-  const checkUnsaved = useSetAtom(checkUnsavedAtom);
 
   // Initialize auto-save functionality
   const { save } = useNoteOperations();
@@ -175,13 +167,30 @@ function NotePage() {
     };
   }, [id, router, setPageLoading, initializeNote, setAllTags]);
 
-  const handleTagsChange = useCallback(
-    (newTags: string[]) => {
-      setTags(newTags);
-      checkUnsaved();
+  /**
+   * A `#tag` was clicked in the editor (preview mode). Persist whatever is
+   * on screen first — navigating away without a save would drop the edit —
+   * then land on the list filtered to that tag.
+   */
+  const handleTagClick = useCallback(
+    async (tag: string) => {
+      if (unsaved && !autoSave) await save(false);
+      router.push(`/?tag=${encodeURIComponent(tag)}`);
     },
-    [setTags, checkUnsaved],
+    [save, router, unsaved, autoSave],
   );
+
+  // NoteContent emits tag clicks as a window event (same channel as
+  // note:save), because the virtualized editor memoizes its render tree —
+  // passing callbacks through pages of memo boundaries is unreliable.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const tag = (e as CustomEvent<string>).detail;
+      if (typeof tag === "string" && tag) void handleTagClick(tag);
+    };
+    window.addEventListener("note:tagclick", handler);
+    return () => window.removeEventListener("note:tagclick", handler);
+  }, [handleTagClick]);
 
   if (pageLoading || (!loadedNote && !notFound)) {
     return (
@@ -218,15 +227,6 @@ function NotePage() {
 
       {/* Note title editor */}
       <NoteTitle />
-
-      {/* Tag input with suggestions */}
-      {!zen && (
-        <TagInput
-          onChange={handleTagsChange}
-          value={tags}
-          suggestions={allTags}
-        />
-      )}
 
       {/* Node Editor */}
       <div className="flex-1 min-h-0 overflow-y-auto pb-28 sm:pb-0">

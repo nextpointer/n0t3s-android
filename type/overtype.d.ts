@@ -25,5 +25,11 @@ declare module "overtype" {
       level?: number,
       toggle?: boolean,
     ): void;
+    /**
+     * Raw insertion with an OverType format object (`prefix`/`suffix`,
+     * `multiline`, `surroundWithNewlines`, `trimFirst`, …). Used for actions
+     * the library has no named toggle for (strikethrough, code block, hr).
+     */
+    applyCustomFormat(textarea: HTMLTextAreaElement, format: object): void;
   };
 }

@@ -16,6 +16,8 @@ import { shikiPool } from "@/lib/shiki-worker-pool";
 import { normalizeLang } from "@/lib/shiki-langs";
 import { useTheme } from "next-themes";
 import { EditorToolbar, type ToolbarEditor } from "./EditorToolbar";
+import { TagAutocomplete } from "./TagAutocomplete";
+import { allTagsAtom } from "@/store/noteAtom";
 
 interface NoteContentProps {
   initialContent: string;
@@ -95,6 +97,59 @@ function toggleTaskByIndex(textarea: HTMLTextAreaElement, index: number) {
 
   textarea.value = next;
   textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+/**
+ * The `#tag` token under a viewport point rendered in the preview layer, or
+ * null.
+ *
+ * Preview HTML is regenerated per keystroke, so there is no stable mapping
+ * back to source offsets — the position is located with the caret APIs and
+ * the tag token is read out of the hit text node. Checkbox clicks are left
+ * out: the dedicated `change` handler owns them.
+ */
+function tagAtPoint(preview: HTMLElement, x: number, y: number): string | null {
+  const elementFromPoint = document.elementFromPoint(x, y);
+  if (elementFromPoint && !preview.contains(elementFromPoint)) return null;
+  if (
+    elementFromPoint instanceof HTMLInputElement ||
+    elementFromPoint instanceof HTMLTextAreaElement
+  ) {
+    return null;
+  }
+
+  // Chromium/WebKit first, Firefox fallback (different call, same position).
+  type CaretPos = { offsetNode: Node; offset: number };
+  const position: CaretPos | null =
+    document.caretPositionFromPoint?.(x, y) ??
+    (() => {
+      const range = document.caretRangeFromPoint?.(x, y);
+      return range ? { offsetNode: range.startContainer, offset: range.startOffset } : null;
+    })();
+  const node = position?.offsetNode ?? null;
+  if (!node || node.nodeType !== Node.TEXT_NODE) return null;
+
+  return tagTokenAt(node.textContent ?? "", position?.offset ?? 0);
+}
+
+/** The `#word` covering `offset` in one text node, using TAG_WORD rules. */
+function tagTokenAt(text: string, offset: number): string | null {
+  if (offset <= 0 || offset > text.length) return null;
+
+  // Walk back over the word characters to the tag's "#".
+  let i = offset - 1;
+  while (i >= 0 && /[A-Za-z0-9_-]/.test(text[i])) i--;
+  if (i < 0 || text[i] !== "#") return null;
+  const hash = i;
+
+  // The "#" must start the token: preceded by line start, whitespace or an
+  // opening bracket (the same rule lib/tags.ts applies to extraction).
+  if (hash === 0 || /[\s(\[{]/.test(text[hash - 1])) {
+    const rest = text.slice(hash + 1);
+    const word = /^[A-Za-z][A-Za-z0-9_-]*/.exec(rest);
+    return word ? word[0] : null;
+  }
+  return null;
 }
 
 /**
@@ -242,6 +297,8 @@ export const NoteContent = memo(
     const toolbarEnabled = useAtomValue(toolbarEnabledAtom);
     const previewColorsOn = useAtomValue(previewColorsAtom);
     const fontSize = useAtomValue(editorFontSizeAtom);
+    // Union of every note's tags — the autocomplete's suggestion pool.
+    const allTags = useAtomValue(allTagsAtom);
 
     // Read by the init effect without becoming one of its dependencies, so
     // toggling a setting never rebuilds the editor.
@@ -336,6 +393,20 @@ export const NoteContent = memo(
       if (!Number.isInteger(index)) return;
 
       toggleTaskByIndex(textarea, index);
+    }, []);
+
+    // The preview click handler is installed once per editor build (init
+    // effect) but must always reach the latest page-supplied navigation, so
+    // it lives in a ref full of window-event indirection instead.
+    const handlePreviewClick = useCallback((event: MouseEvent) => {
+      const preview = editorRef.current?.preview as HTMLElement | undefined;
+      if (!preview) return;
+      const tag = tagAtPoint(preview, event.clientX, event.clientY);
+      if (!tag) return;
+      // The page listens for this and routes to the tag-filtered list.
+      window.dispatchEvent(
+        new CustomEvent("note:tagclick", { detail: tag }),
+      );
     }, []);
 
     /** The editor follows the shared atom, so every entry point stays in sync. */
@@ -600,6 +671,7 @@ export const NoteContent = memo(
         // every re-render.
         const previewEl = editorInstance.preview as HTMLElement | undefined;
         previewEl?.addEventListener("change", handlePreviewTaskChange);
+        previewEl?.addEventListener("click", handlePreviewClick);
 
         // Attach Shiki highlighter immediately after editor creation
         const currentShikiTheme = resolvedTheme === "dark" ? "github-dark" : "github-light";
@@ -710,6 +782,12 @@ export const NoteContent = memo(
             fontFamily: "'Jetbrains Mono', 'Space Mono', monospace",
             fontWeight: "800",
           }}
+        />
+        {/* Obsidian-style #tag completion, floating above the keyboard inset. */}
+        <TagAutocomplete
+          textarea={(editor?.textarea as HTMLTextAreaElement) ?? null}
+          allTags={allTags}
+          visible={viewMode !== "preview"}
         />
         <div
           className="note-stats fixed bottom-4 xl:bottom-6 pointer-events-none xl:ml-4 ml-3 "
