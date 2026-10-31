@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.RemoteViews;
 import io.github.nextpointer.n0t3s.MainActivity;
@@ -22,6 +23,8 @@ import org.json.JSONObject;
  * web router.
  */
 public class NotesWidgetProvider extends AppWidgetProvider {
+
+    private static final String TAG = "N0t3sWidget";
 
     private static final int[] ROW_IDS = {
         R.id.widget_note_0,
@@ -80,6 +83,33 @@ public class NotesWidgetProvider extends AppWidgetProvider {
     }
 
     private static void render(Context context, AppWidgetManager manager, int appWidgetId) {
+        try {
+            renderChecked(context, manager, appWidgetId);
+        } catch (Exception e) {
+            // Never let a render problem surface as "Problem loading widget";
+            // fall back to a plain static label so the placement stays valid.
+            Log.w(TAG, "widget render failed, using fallback", e);
+            try {
+                RemoteViews fallback = new RemoteViews(
+                    context.getPackageName(),
+                    android.R.layout.simple_list_item_1
+                );
+                fallback.setTextViewText(android.R.id.text1, "N0T3S");
+                fallback.setOnClickPendingIntent(
+                    android.R.id.text1, plainAppIntent(context)
+                );
+                manager.updateAppWidget(appWidgetId, fallback);
+            } catch (Exception fatal) {
+                Log.e(TAG, "widget fallback failed", fatal);
+            }
+        }
+    }
+
+    private static void renderChecked(
+        Context context,
+        AppWidgetManager manager,
+        int appWidgetId
+    ) {
         RemoteViews views =
             new RemoteViews(context.getPackageName(), R.layout.widget_notes);
 
